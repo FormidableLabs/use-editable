@@ -25,6 +25,8 @@ It aims to allow any element to be editable while still being able to render nor
 > It aims to support content that doesn't quite map 1:1 to DOM content and further event handlers
 > to handle inputs more granularly.
 
+**Check out [the full demo on CodeSandbox](https://codesandbox.io/s/use-editable-0l9kc) with `prism-react-renderer`!**
+
 ## Usage
 
 First install `use-editable` alongside `react`:

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noEmit": true,
+    "lib": ["dom", "esnext"],
+    "jsx": "react",
+    "module": "es2015",
+    "moduleResolution": "node",
+    "target": "esnext",
+    "strict": true,
+    "noImplicitAny": false,
+    "noUnusedParameters": true
+  }
+}

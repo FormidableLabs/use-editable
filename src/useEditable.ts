@@ -258,7 +258,7 @@ export const useEditable = (
         }
 
         if (state) {
-          if (state.position !== null) positionRef.current = state.position;
+          positionRef.current = state.position;
           onChangeRef.current(state.content);
         }
         return;
@@ -268,12 +268,12 @@ export const useEditable = (
 
       // Firefox Quirks: Firefox insists on adding <br> tags since it doesn't support
       // plaintext-only mode and doesn't immediately normalize duplicate text nodes
-      if (event.key === 'Enter') {
+      if (!hasPlaintextSupport && event.key === 'Enter') {
         event.preventDefault();
         document.execCommand('insertHTML', false, '\r\n');
         element.normalize();
         flushChanges();
-      } else if (event.key === 'Backspace') {
+      } else if (!hasPlaintextSupport && event.key === 'Backspace') {
         element.normalize();
       }
     };

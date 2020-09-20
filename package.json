@@ -1,12 +1,17 @@
 {
   "name": "use-editable",
-  "description": "Turn elements into fully renderable & editable content surfaces, like code editors, using this contenteditable hook (and magic)",
-  "version": "0.1.0",
+  "description": "A small React hook to turn elements into fully renderable & editable content surfaces, like code editors, using contenteditable (and magic)",
+  "version": "0.1.1",
   "main": "dist/use-editable.js",
   "module": "dist/use-editable.es.js",
   "types": "dist/types/index.d.ts",
   "source": "src/index.ts",
   "license": "MIT",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist/"
+  ],
   "scripts": {
     "check": "tsc",
     "build": "rollup -c rollup.config.js",

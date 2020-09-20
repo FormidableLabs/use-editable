@@ -14,6 +14,9 @@ const observerSettings = {
   subtree: true,
 };
 
+const hasPlaintextSupport =
+  typeof navigator !== 'undefined' && !/firefox/i.test(navigator.userAgent);
+
 const isUndoRedoKey = (event: KeyboardEvent): boolean =>
   (event.metaKey || event.ctrlKey) && event.code === 'KeyZ';
 
@@ -32,6 +35,10 @@ const toString = (element: HTMLElement): string => {
     if (node.nextSibling) queue.push(node.nextSibling);
     if (node.firstChild) queue.push(node.firstChild);
   }
+
+  // contenteditable Quirk: Without plaintext-only a pre/pre-wrap element must always
+  // end with at least one newline character
+  if (content[content.length - 1] !== '\n') content += '\n';
 
   return content;
 };
@@ -159,7 +166,6 @@ export const useEditable = (
       setPosition(element, positionRef.current);
     }
 
-    const hasPlaintextSupport = !/firefox/i.test(navigator.userAgent);
     const prevAttribute = element.getAttribute('contentEditable');
     // Firefox does not support plaintext-only mode yet
     element.setAttribute(

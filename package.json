@@ -6,12 +6,23 @@
   "module": "dist/use-editable.es.js",
   "types": "dist/types/index.d.ts",
   "source": "src/index.ts",
+  "sideEffects": false,
   "license": "MIT",
   "files": [
     "LICENSE",
     "README.md",
     "dist/"
   ],
+  "keywords": [
+    "contenteditable",
+    "text editing",
+    "react",
+    "hook"
+  ],
+  "repository": "https://github.com/kitten/use-editable",
+  "bugs": {
+    "url": "https://github.com/kitten/use-editable/issues"
+  },
   "scripts": {
     "check": "tsc",
     "build": "rollup -c rollup.config.js",

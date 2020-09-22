@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { RefObject, useReducer, useRef, useLayoutEffect } from 'react';
 
 interface Position {
@@ -220,6 +219,10 @@ export const useEditable = (
         '' + opts!.indentation;
     }
 
+    const indentRe = new RegExp(
+      `^(?:${' '.repeat(opts!.indentation || 0)}|\\t)`
+    );
+
     let _trackStateTimestamp: number;
     const trackState = (ignoreTimestamp?: boolean) => {
       if (!elementRef.current || positionRef.current === -1) return;
@@ -346,14 +349,17 @@ export const useEditable = (
         }
       } else if (opts!.indentation && event.key === 'Tab') {
         event.preventDefault();
-        const content = toString(element);
         const position = getPosition(element);
         const start = position.position - position.content.length;
-        const newContent =
-          content.slice(0, start) +
-          ' '.repeat(opts!.indentation) +
-          content.slice(start);
-        positionRef.current = position.position + opts!.indentation;
+        const content = toString(element);
+        const newContent = event.shiftKey
+          ? content.slice(0, start) +
+            position.content.replace(indentRe, '') +
+            content.slice(start + position.content.length)
+          : content.slice(0, start) + '\t' + content.slice(start);
+
+        positionRef.current =
+          position.position + (newContent.length - content.length);
         onChangeRef.current(newContent, position);
       }
     };

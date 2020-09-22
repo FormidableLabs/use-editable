@@ -61,7 +61,7 @@ const getPosition = (element: HTMLElement): Position => {
   // if the selection happens to land in-between nodes
   let { focusNode, focusOffset } = selection;
   if (focusNode && focusNode.nodeType !== Node.TEXT_NODE) {
-    if (focusOffset <= focusNode.childNodes.length - 1)
+    if (focusNode.childNodes[focusOffset])
       focusNode = focusNode.childNodes[focusOffset];
     focusOffset = 0;
   }
@@ -139,16 +139,22 @@ const setPosition = (element: HTMLElement, position: number): void => {
     if (node.firstChild) queue.push(node.firstChild);
   }
 
-  selection.removeAllRanges();
+  selection.empty();
   selection.addRange(range);
 };
 
 const insert = (text: string) => {
-  const range = window.getSelection()!.getRangeAt(0)!;
+  const selection = window.getSelection()!;
   const node = document.createTextNode(text);
-  range.deleteContents();
+  let range = window.getSelection()!.getRangeAt(0)!;
+  selection.getRangeAt(0).deleteContents();
   range.insertNode(node);
+  // Safari Quirk: Safari doesn't allow the active range's start to be modified
+  // at this point anymore, so a new one has to be created;
+  range = document.createRange();
   range.setStartAfter(node);
+  selection.empty();
+  selection.addRange(range);
 };
 
 interface Options {

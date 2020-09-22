@@ -138,13 +138,13 @@ const setPosition = (element: HTMLElement, position: number): void => {
   selection.addRange(range);
 };
 
-// IE11 Quirks: This is used instead of the insertText/insertHTML commands
-// because IE11 doesn't support them.
-const insert = (text: string) =>
-  window
-    .getSelection()!
-    .getRangeAt(0)!
-    .insertNode(document.createTextNode(text));
+const insert = (text: string) => {
+  const range = window.getSelection()!.getRangeAt(0)!;
+  const node = document.createTextNode(text);
+  range.deleteContents();
+  range.insertNode(node);
+  range.setStartAfter(node);
+};
 
 interface Options {
   disabled?: boolean;

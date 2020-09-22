@@ -151,6 +151,10 @@ the editing behavior of the hook:
   improved `Tab` key behavior which will indent the current line or dedent the current line when shift is
   held (Be aware that this will make the editor act as a focus trap!)
 
+Additionally the `useEditable` hook returns a function that may be used to update the content while
+adjusting the next render's cursor position. This is a convenience method that can come in handy for
+adding auto-suggested content in combination with a `Position`'s current line contents for instance.
+
 ## Acknowledgments
 
 - [`react-live`](https://github.com/FormidableLabs/react-live/blob/v1.12.0/src/components/Editor/index.js), which I've worked on

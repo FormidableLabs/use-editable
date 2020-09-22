@@ -1,4 +1,10 @@
-import { RefObject, useReducer, useRef, useLayoutEffect } from 'react';
+import {
+  RefObject,
+  useCallback,
+  useReducer,
+  useRef,
+  useLayoutEffect,
+} from 'react';
 
 interface Position {
   position: number;
@@ -12,6 +18,7 @@ interface State {
 }
 
 type ChangeHandler = (text: string, position: Position) => void;
+type UpdateAction = (content: string) => void;
 
 const observerSettings = {
   characterData: true,
@@ -155,8 +162,7 @@ export const useEditable = (
   elementRef: RefObject<HTMLElement>,
   onChange: ChangeHandler,
   opts?: Options
-) => {
-  if (typeof navigator !== 'object') return;
+): UpdateAction => {
   if (!opts) opts = {};
 
   const unblock = useReducer(x => x + 1, 0)[1];
@@ -173,6 +179,20 @@ export const useEditable = (
   const observerRef = useRef(new MutationObserver(addMutationsToQueue));
 
   onChangeRef.current = onChange;
+
+  const update = useCallback((content: string) => {
+    const { current: element } = elementRef;
+    if (element) {
+      const position = getPosition(element);
+      const prevContent = toString(element);
+      positionRef.current =
+        position.position + (content.length - prevContent.length);
+      onChangeRef.current(content, position);
+    }
+  }, []);
+
+  // Only for SSR / server-side logic
+  if (typeof navigator !== 'object') return update;
 
   useLayoutEffect(() => {
     if (!elementRef.current || opts!.disabled) return;
@@ -357,10 +377,7 @@ export const useEditable = (
             position.content.replace(indentRe, '') +
             content.slice(start + position.content.length)
           : content.slice(0, start) + '\t' + content.slice(start);
-
-        positionRef.current =
-          position.position + (newContent.length - content.length);
-        onChangeRef.current(newContent, position);
+        update(newContent);
       }
     };
 
@@ -404,4 +421,6 @@ export const useEditable = (
       element.contentEditable = prevContentEditable;
     };
   }, [elementRef.current!, opts!.disabled, opts!.indentation]);
+
+  return update;
 };

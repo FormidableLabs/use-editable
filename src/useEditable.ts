@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { RefObject, useReducer, useRef, useLayoutEffect } from 'react';
 
 interface Position {
@@ -148,6 +149,7 @@ const insert = (text: string) => {
 
 interface Options {
   disabled?: boolean;
+  indentation?: number;
 }
 
 export const useEditable = (
@@ -212,6 +214,11 @@ export const useEditable = (
     }
 
     if (prevWhiteSpace !== 'pre') element.style.whiteSpace = 'pre-wrap';
+
+    if (opts!.indentation) {
+      element.style.tabSize = (element.style as any).MozTabSize =
+        '' + opts!.indentation;
+    }
 
     let _trackStateTimestamp: number;
     const trackState = (ignoreTimestamp?: boolean) => {
@@ -337,6 +344,17 @@ export const useEditable = (
           positionRef.current = index;
           onChangeRef.current(content, position);
         }
+      } else if (opts!.indentation && event.key === 'Tab') {
+        event.preventDefault();
+        const content = toString(element);
+        const position = getPosition(element);
+        const start = position.position - position.content.length;
+        const newContent =
+          content.slice(0, start) +
+          ' '.repeat(opts!.indentation) +
+          content.slice(start);
+        positionRef.current = position.position + opts!.indentation;
+        onChangeRef.current(newContent, position);
       }
     };
 
@@ -379,5 +397,5 @@ export const useEditable = (
       element.style.whiteSpace = prevWhiteSpace;
       element.contentEditable = prevContentEditable;
     };
-  }, [elementRef.current!, opts!.disabled]);
+  }, [elementRef.current!, opts!.disabled, opts!.indentation]);
 };

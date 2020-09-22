@@ -72,9 +72,8 @@ const getPosition = (element: HTMLElement): number => {
 
 const setPosition = (element: HTMLElement, position: number): void => {
   const selection = window.getSelection()!;
+  const range = document.createRange();
   const queue: Node[] = [element.firstChild!];
-  const range = new Range();
-
   let current = 0;
 
   let node: Node;
@@ -108,6 +107,14 @@ const setPosition = (element: HTMLElement, position: number): void => {
   selection.removeAllRanges();
   selection.addRange(range);
 };
+
+// IE11 Quirks: This is used instead of the insertText/insertHTML commands
+// because IE11 doesn't support them.
+const insert = (text: string) =>
+  window
+    .getSelection()!
+    .getRangeAt(0)!
+    .insertNode(document.createTextNode(text));
 
 interface Options {
   disabled?: boolean;
@@ -204,14 +211,17 @@ export const useEditable = (
       }
     };
 
+    const disconnect = () => {
+      observerRef.current.disconnect();
+      disconnectedRef.current = true;
+    };
+
     const flushChanges = () => {
       addMutationsToQueue(observerRef.current.takeRecords());
       if (queueRef.current.length > 0) {
+        disconnect();
         const content = toString(element);
         positionRef.current = getPosition(element);
-        observerRef.current.disconnect();
-        disconnectedRef.current = true;
-
         let mutation: MutationRecord | void;
         let i = 0;
         while ((mutation = queueRef.current.pop())) {
@@ -265,15 +275,22 @@ export const useEditable = (
         trackState();
       }
 
-      // Firefox Quirks: Firefox insists on adding <br> tags since it doesn't support
-      // plaintext-only mode and doesn't immediately normalize duplicate text nodes
       if (!hasPlaintextSupport && event.key === 'Enter') {
         event.preventDefault();
-        document.execCommand('insertHTML', false, '\r\n');
-        element.normalize();
-        flushChanges();
+        // Firefox / IE11 Quirk: Since plaintext-only is unsupported we must
+        // ensure that only newline characters are inserted
+        insert('\n');
       } else if (!hasPlaintextSupport && event.key === 'Backspace') {
-        element.normalize();
+        event.preventDefault();
+        disconnect();
+        // IE11 Quirk: Removing text nodes and readding them causes bugs in
+        // IE11 as it doesn't like having DOM nodes readded. This is applied
+        // to Firefox too for simplicity's sake
+        const position = Math.max(0, getPosition(element) - 1);
+        let content = toString(element);
+        content = content.slice(0, position) + content.slice(position + 1);
+        positionRef.current = position;
+        onChangeRef.current(content);
       }
     };
 
@@ -296,15 +313,7 @@ export const useEditable = (
     const onPaste = (event: HTMLElementEventMap['paste']) => {
       event.preventDefault();
       trackState(true);
-      const text = event
-        .clipboardData!.getData('text/plain')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-      document.execCommand('insertHTML', false, text);
-      element.normalize();
+      insert(event.clipboardData!.getData('text/plain'));
       trackState(true);
       flushChanges();
     };

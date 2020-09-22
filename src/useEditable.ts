@@ -307,11 +307,17 @@ export const useEditable = (
         trackState();
       }
 
-      if (!hasPlaintextSupport && event.key === 'Enter') {
+      if (event.key === 'Enter') {
         event.preventDefault();
         // Firefox / IE11 Quirk: Since plaintext-only is unsupported we must
         // ensure that only newline characters are inserted
-        insert('\n');
+        const position = getPosition(element);
+        // We also get the current line and preserve indentation for the next
+        // line that's created
+        const match = /\S/g.exec(position.content);
+        const index = match ? match.index : position.content.length;
+        const text = '\n' + position.content.slice(0, index);
+        insert(text);
       } else if (!hasPlaintextSupport && event.key === 'Backspace') {
         event.preventDefault();
         disconnect();

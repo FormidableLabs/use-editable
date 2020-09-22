@@ -320,16 +320,23 @@ export const useEditable = (
         insert(text);
       } else if (!hasPlaintextSupport && event.key === 'Backspace') {
         event.preventDefault();
-        disconnect();
-        // IE11 Quirk: Removing text nodes and readding them causes bugs in
-        // IE11 as it doesn't like having DOM nodes readded. This is applied
-        // to Firefox too for simplicity's sake
-        const position = getPosition(element);
-        const index = Math.max(0, position.position - 1);
-        let content = toString(element);
-        content = content.slice(0, index) + content.slice(index + 1);
-        positionRef.current = index;
-        onChangeRef.current(content, position);
+        const range = window.getSelection()!.getRangeAt(0)!;
+        if (
+          range.startContainer !== range.endContainer ||
+          range.startOffset !== range.endOffset
+        ) {
+          range.deleteContents();
+        } else {
+          // Firefox Quirk: Backspacing won't preserve the correct position
+          // so it's easier to reimplement it and skip rendering for normal backspacing
+          disconnect();
+          const position = getPosition(element);
+          const index = Math.max(0, position.position - 1);
+          let content = toString(element);
+          content = content.slice(0, index) + content.slice(index + 1);
+          positionRef.current = index;
+          onChangeRef.current(content, position);
+        }
       }
     };
 

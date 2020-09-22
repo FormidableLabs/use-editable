@@ -129,11 +129,27 @@ now this is as mentioned just a (hopefully promising) proof of concept.
 
 ### `useEditable`
 
-Currently accepts three arguments:
+The **first argument** is `elementRef` and accepts a ref object of type `RefObject<HTMLElement>` which
+points to the element that should become editable. This ref is allowed to be `null` or change during
+the runtime of the hook. As long as the changes of the ref are triggered by React, everything should
+behave as expected.
 
-- An `elementRef` of type `RefObject<HTMLElement>` that contains a ref to an element.
-- An `onChange` callback of type `(text: string) => void` which will be called when any change occurs.
-- An optional `options` object with settings, which currently only accepts `disabled: boolean` to disable the contenteditable.
+The **second argument** is `onChange` and accepts a callback of type `(text: string, pos: Position) => void`
+that's called whenever the content of the `contenteditable` changes. This needs to be set up so that
+it'll trigger a rerender of the element's contents.
+
+The `text` that `onChange` receives is just the textual representation of the element's contents, while the
+`Position` it receives contains the current position of the cursor, the line number (zero-indexed), and
+the content of the current line up until the cursor, which is useful for autosuggestions.
+
+The **third argument** is an optional `options` object. This accepts currently two options to change
+the editing behavior of the hook:
+
+- The `disabled` option disables editing on the editable by removing the `contentEditable` attribute from
+  it again.
+- The `indentation` option may be a number of displayed spaces for indentation. This also enables the
+  improved `Tab` key behavior which will indent the current line or dedent the current line when shift is
+  held (Be aware that this will make the editor act as a focus trap!)
 
 ## Acknowledgments
 

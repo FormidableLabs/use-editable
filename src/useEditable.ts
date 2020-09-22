@@ -211,26 +211,17 @@ export const useEditable = (
         disconnectedRef.current = true;
 
         let mutation: MutationRecord | void;
+        let i = 0;
         while ((mutation = queueRef.current.pop())) {
-          let i = 0;
-          switch (mutation.type) {
-            case 'childList': {
-              i = mutation.addedNodes.length;
-              while (i-- > 0)
-                mutation.target.removeChild(mutation.addedNodes[i]);
-              i = mutation.removedNodes.length;
-              while (i-- > 0)
-                mutation.target.insertBefore(
-                  mutation.removedNodes[i],
-                  mutation.nextSibling
-                );
-              break;
-            }
-            case 'characterData': {
-              mutation.target.nodeValue = mutation.oldValue;
-              break;
-            }
-          }
+          if (mutation.oldValue !== null)
+            mutation.target.textContent = mutation.oldValue;
+          for (i = mutation.removedNodes.length - 1; i >= 0; i--)
+            mutation.target.insertBefore(
+              mutation.removedNodes[i],
+              mutation.nextSibling
+            );
+          for (i = mutation.addedNodes.length - 1; i >= 0; i--)
+            mutation.target.removeChild(mutation.addedNodes[i]);
         }
 
         onChangeRef.current(content);

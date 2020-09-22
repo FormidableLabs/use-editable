@@ -24,7 +24,7 @@ const toString = (element: HTMLElement): string => {
   let node: Node;
   while ((node = queue.pop()!)) {
     if (node.nodeType === Node.TEXT_NODE) {
-      content += node.nodeValue;
+      content += node.textContent;
     } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName === 'BR') {
       content += '\n';
     }
@@ -58,7 +58,7 @@ const getPosition = (element: HTMLElement): number => {
   while ((node = queue.pop()!)) {
     if (node.nodeType === Node.TEXT_NODE) {
       if (node === focusNode) return position + focusOffset;
-      position += node.nodeValue!.length;
+      position += node.textContent!.length;
     } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName === 'BR') {
       position++;
     }
@@ -80,7 +80,7 @@ const setPosition = (element: HTMLElement, position: number): void => {
   let node: Node;
   while ((node = queue.pop()!)) {
     if (node.nodeType === Node.TEXT_NODE) {
-      const length = node.nodeValue!.length;
+      const length = node.textContent!.length;
       if (current + length >= position) {
         const offset = position - current;
         if (offset === length) {
@@ -91,7 +91,7 @@ const setPosition = (element: HTMLElement, position: number): void => {
         break;
       }
 
-      current += node.nodeValue!.length;
+      current += node.textContent!.length;
     } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName === 'BR') {
       if (current + 1 >= position) {
         range.setStartAfter(node);

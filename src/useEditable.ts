@@ -14,9 +14,6 @@ const observerSettings = {
   subtree: true,
 };
 
-const hasPlaintextSupport =
-  typeof navigator !== 'undefined' && !/firefox/i.test(navigator.userAgent);
-
 const isUndoRedoKey = (event: KeyboardEvent): boolean =>
   (event.metaKey || event.ctrlKey) && event.code === 'KeyZ';
 
@@ -51,22 +48,22 @@ const getPosition = (element: HTMLElement): number => {
   // if the selection happens to land in-between nodes
   let { focusNode, focusOffset } = selection;
   if (focusNode && focusNode.nodeType !== Node.TEXT_NODE) {
-    focusNode = focusNode.childNodes[focusOffset];
+    if (focusOffset <= focusNode.childNodes.length - 1)
+      focusNode = focusNode.childNodes[focusOffset];
     focusOffset = 0;
   }
 
   let position = 0;
   let node: Node | void;
   while ((node = queue.pop()!)) {
-    if (focusNode === node) return position + focusOffset;
-
     if (node.nodeType === Node.TEXT_NODE) {
+      if (node === focusNode) return position + focusOffset;
       position += node.nodeValue!.length;
     } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName === 'BR') {
       position++;
     }
 
-    if (node.nextSibling) queue.push(node.nextSibling);
+    if (node.nextSibling && node !== focusNode) queue.push(node.nextSibling);
     if (node.firstChild) queue.push(node.firstChild);
   }
 
@@ -166,13 +163,18 @@ export const useEditable = (
       setPosition(element, positionRef.current);
     }
 
-    const prevAttribute = element.getAttribute('contentEditable');
-    // Firefox does not support plaintext-only mode yet
-    element.setAttribute(
-      'contentEditable',
-      hasPlaintextSupport ? 'plaintext-only' : 'true'
-    );
-    element.style.whiteSpace = 'pre-wrap';
+    const prevWhiteSpace = element.style.whiteSpace;
+    const prevContentEditable = element.contentEditable;
+    let hasPlaintextSupport = true;
+    try {
+      // Firefox and IE11 do not support plaintext-only mode
+      element.contentEditable = 'plaintext-only';
+    } catch (_error) {
+      element.contentEditable = 'true';
+      hasPlaintextSupport = false;
+    }
+
+    if (prevWhiteSpace !== 'pre') element.style.whiteSpace = 'pre-wrap';
 
     let _trackStateTimestamp: number;
     const trackState = (ignoreTimestamp?: boolean) => {
@@ -319,7 +321,8 @@ export const useEditable = (
       element.removeEventListener('paste', onPaste);
       element.removeEventListener('keydown', onKeyDown);
       element.removeEventListener('keyup', onKeyUp);
-      element.setAttribute('contentEditable', prevAttribute!);
+      element.style.whiteSpace = prevWhiteSpace;
+      element.contentEditable = prevContentEditable;
     };
   }, [elementRef.current!, opts!.disabled]);
 };

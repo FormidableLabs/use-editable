@@ -267,6 +267,7 @@ export const useEditable = (
         }
 
         if (state) {
+          disconnect();
           positionRef.current = state.position;
           onChangeRef.current(state.content);
         }

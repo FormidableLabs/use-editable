@@ -112,17 +112,10 @@ as state. This is a limitation of how `contenteditable`'s work, since they'll on
 DOM content. Since `use-editable` doesn't aim to be a full component that manages the render cycle, it
 doesn't have to keep any extra state, but will only pass the DOM's text back to the `onChange` callback.
 
-### Why is it experimental?
-
-Browsers and their implementation of `contenteditable` are... lacklustre at best, and this has been
-a known and often bemoaned issue over the years. While `use-editable` has been tested mainly against
-current versions of Chrome, Firefox, and Safari it is Firefox that has most problems with keeping
-its selection state consistent — mostly because it doesn't implement `contenteditable="plaintext-only"`
-yet.
-
-So be careful when handling newlines; you'll likely want to use newline characters instead of block
-or `br` elements for now, until all these edge cases have been tested and fixed in `use-editable`. So for
-now this is as mentioned just a (hopefully promising) proof of concept.
+Using the `onChange` callback you'll also receive a `Position` object describing the cursor position,
+the current line number, and the line's contents up until the cursor, which is useful for auto-suggestions,
+which could then be applied with the `update` function that `useEditable` returns to update the cursor
+position.
 
 ## API
 

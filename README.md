@@ -20,11 +20,6 @@ This is ideal for creating small code editors or prose textareas in under `2kB`!
 
 It aims to allow any element to be editable while still being able to render normal React elements to it — no `innerHTML` and having to deal with operating with or rendering to raw HTML, or starting a full editor project from scratch.
 
-> ⚠️ **Experimental**
-> The `useEditable` hook is a proof-of-concept stage project and its API isn't finalised yet.
-> It aims to support content that doesn't quite map 1:1 to DOM content and further event handlers
-> to handle inputs more granularly.
-
 **Check out [the full demo on CodeSandbox](https://codesandbox.io/s/use-editable-0l9kc) with `prism-react-renderer`!**
 
 ## Usage
@@ -74,13 +69,15 @@ element that is being rendered, and to `setCode` which drives our state containi
 
 ## Browser Compatibility
 
-This library has been tested against and should work properly using:
+This library has been tested against and **should work properly** using:
 
 - Chrome
 - Safari
 - iOS Safari
 - Firefox
-- IE 11
+
+There are known issues in **IE 11** due to the `MutationObserver` method being unable to
+readd text nodes that have been removed via the `contenteditable`.
 
 ## FAQ
 

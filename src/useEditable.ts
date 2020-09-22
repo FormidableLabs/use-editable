@@ -1,11 +1,17 @@
 import { RefObject, useReducer, useRef, useLayoutEffect } from 'react';
 
-interface State {
+interface Position {
   position: number;
+  content: string;
+  line: number;
+}
+
+interface State {
+  position: Position;
   content: string;
 }
 
-type ChangeHandler = (text: string) => void;
+type ChangeHandler = (text: string, position: Position) => void;
 
 const observerSettings = {
   characterData: true,
@@ -40,7 +46,7 @@ const toString = (element: HTMLElement): string => {
   return content;
 };
 
-const getPosition = (element: HTMLElement): number => {
+const getPosition = (element: HTMLElement): Position => {
   const selection = window.getSelection()!;
   const queue: Node[] = [element.firstChild!];
 
@@ -54,12 +60,32 @@ const getPosition = (element: HTMLElement): number => {
   }
 
   let position = 0;
+  let line = 0;
+  let content = '';
   let node: Node | void;
   while ((node = queue.pop()!)) {
     if (node.nodeType === Node.TEXT_NODE) {
-      if (node === focusNode) return position + focusOffset;
-      position += node.textContent!.length;
+      let textContent = node.textContent!;
+      if (node === focusNode) {
+        textContent = textContent.slice(0, focusOffset);
+      }
+
+      position += textContent.length;
+      content += textContent;
+      const newlineRe = /\n/g;
+      for (
+        let match: RegExpExecArray | null;
+        (match = newlineRe.exec(textContent));
+
+      ) {
+        content = textContent.slice(match.index + 1);
+        line++;
+      }
+
+      if (node === focusNode) break;
     } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName === 'BR') {
+      content = '';
+      line++;
       position++;
     }
 
@@ -67,7 +93,11 @@ const getPosition = (element: HTMLElement): number => {
     if (node.firstChild) queue.push(node.firstChild);
   }
 
-  return position;
+  return {
+    position,
+    content,
+    line,
+  };
 };
 
 const setPosition = (element: HTMLElement, position: number): void => {
@@ -221,7 +251,8 @@ export const useEditable = (
       if (queueRef.current.length > 0) {
         disconnect();
         const content = toString(element);
-        positionRef.current = getPosition(element);
+        const position = getPosition(element);
+        positionRef.current = position.position;
         let mutation: MutationRecord | void;
         let i = 0;
         while ((mutation = queueRef.current.pop())) {
@@ -236,7 +267,7 @@ export const useEditable = (
             mutation.target.removeChild(mutation.addedNodes[i]);
         }
 
-        onChangeRef.current(content);
+        onChangeRef.current(content, position);
       }
     };
 
@@ -268,8 +299,8 @@ export const useEditable = (
 
         if (state) {
           disconnect();
-          positionRef.current = state.position;
-          onChangeRef.current(state.content);
+          positionRef.current = state.position.position;
+          onChangeRef.current(state.content, state.position);
         }
         return;
       } else {
@@ -287,11 +318,12 @@ export const useEditable = (
         // IE11 Quirk: Removing text nodes and readding them causes bugs in
         // IE11 as it doesn't like having DOM nodes readded. This is applied
         // to Firefox too for simplicity's sake
-        const position = Math.max(0, getPosition(element) - 1);
+        const position = getPosition(element);
+        const index = Math.max(0, position.position - 1);
         let content = toString(element);
-        content = content.slice(0, position) + content.slice(position + 1);
-        positionRef.current = position;
-        onChangeRef.current(content);
+        content = content.slice(0, index) + content.slice(index + 1);
+        positionRef.current = index;
+        onChangeRef.current(content, position);
       }
     };
 
@@ -304,7 +336,7 @@ export const useEditable = (
     };
 
     const onFocus = () => {
-      positionRef.current = getPosition(element);
+      positionRef.current = getPosition(element).position;
     };
 
     const onBlur = () => {

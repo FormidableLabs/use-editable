@@ -80,11 +80,9 @@ const getPosition = (element: HTMLElement): Position => {
       position += textContent.length;
       content += textContent;
       const newlineRe = /\n/g;
-      for (
-        let match: RegExpExecArray | null;
-        (match = newlineRe.exec(textContent));
 
-      ) {
+      let match: RegExpExecArray | null;
+      while ((match = newlineRe.exec(textContent))) {
         content = textContent.slice(match.index + 1);
         line++;
       }
@@ -362,10 +360,8 @@ export const useEditable = (
           disconnect();
           const position = getPosition(element);
           const index = Math.max(0, position.position - 1);
-          let content = toString(element);
-          content = content.slice(0, index) + content.slice(index + 1);
-          positionRef.current = index;
-          onChangeRef.current(content, position);
+          const content = toString(element);
+          update(content.slice(0, index) + content.slice(index + 1));
         }
       } else if (opts!.indentation && event.key === 'Tab') {
         event.preventDefault();

@@ -15,8 +15,7 @@
   <br />
 </div>
 
-`useEditable` is a small hook that enables elements to be `contenteditable` while still being fully renderable.
-This is ideal for creating small code editors or prose textareas in under `2kB`!
+`useEditable` is a small hook that enables elements to be `contenteditable` while still being fully renderable. This is ideal for creating small code editors or prose textareas in just `2kB`!
 
 It aims to allow any element to be editable while still being able to render normal React elements to it — no `innerHTML` and having to deal with operating with or rendering to raw HTML, or starting a full editor project from scratch.
 

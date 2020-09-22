@@ -72,6 +72,16 @@ const RainbowCode = () => {
 And just like that we've hooked up `useEditable` to our `editorRef`, which points to the `<pre>`
 element that is being rendered, and to `setCode` which drives our state containing some code.
 
+## Browser Compatibility
+
+This library has been tested against and should work properly using:
+
+- Chrome
+- Safari
+- iOS Safari
+- Firefox
+- IE 11
+
 ## FAQ
 
 ### How does it work?

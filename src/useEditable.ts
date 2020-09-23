@@ -1,3 +1,4 @@
+/* eslint-disable */
 import {
   RefObject,
   useCallback,
@@ -61,7 +62,7 @@ const getPosition = (element: HTMLElement): Position => {
   // if the selection happens to land in-between nodes
   let { focusNode, focusOffset } = selection;
   if (focusNode && focusNode.nodeType !== Node.TEXT_NODE) {
-    if (focusNode.childNodes[focusOffset])
+    if (focusOffset <= focusNode.childNodes.length - 1)
       focusNode = focusNode.childNodes[focusOffset];
     focusOffset = 0;
   }
@@ -145,12 +146,10 @@ const setPosition = (element: HTMLElement, position: number): void => {
 
 const insert = (text: string) => {
   const selection = window.getSelection()!;
-  const node = document.createTextNode(text);
   let range = window.getSelection()!.getRangeAt(0)!;
+  const node = document.createTextNode(text);
   selection.getRangeAt(0).deleteContents();
   range.insertNode(node);
-  // Safari Quirk: Safari doesn't allow the active range's start to be modified
-  // at this point anymore, so a new one has to be created;
   range = document.createRange();
   range.setStartAfter(node);
   selection.empty();

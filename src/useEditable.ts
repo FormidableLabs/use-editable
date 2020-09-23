@@ -1,8 +1,7 @@
-/* eslint-disable */
 import {
   RefObject,
   useCallback,
-  useReducer,
+  useState,
   useRef,
   useLayoutEffect,
 } from 'react';
@@ -13,10 +12,7 @@ interface Position {
   line: number;
 }
 
-interface State {
-  position: Position;
-  content: string;
-}
+type History = [position: Position, content: string];
 
 type ChangeHandler = (text: string, position: Position) => void;
 type UpdateAction = (content: string) => void;
@@ -168,11 +164,11 @@ export const useEditable = (
 ): UpdateAction => {
   if (!opts) opts = {};
 
-  const unblock = useReducer(x => x + 1, 0)[1];
+  const unblock = useState([])[1];
   const onChangeRef = useRef(onChange);
   const positionRef = useRef(-1);
-  const statesRef = useRef<State[]>([]);
-  const stateAtRef = useRef(-1);
+  const historyRef = useRef<History[]>([]);
+  const historyAtRef = useRef(-1);
   const queueRef = useRef<MutationRecord[]>([]);
   const addMutationsToQueue = (list: MutationRecord[]) => {
     for (let i = 0; i < list.length; i++) queueRef.current.push(list[i]);
@@ -213,8 +209,8 @@ export const useEditable = (
 
   useLayoutEffect(() => {
     if (!elementRef.current || opts!.disabled) {
-      statesRef.current.length = 0;
-      stateAtRef.current = -1;
+      historyRef.current.length = 0;
+      historyAtRef.current = -1;
       return;
     }
 
@@ -250,27 +246,27 @@ export const useEditable = (
     const trackState = (ignoreTimestamp?: boolean) => {
       if (!elementRef.current || positionRef.current === -1) return;
 
-      const { current: states } = statesRef;
+      const { current: history } = historyRef;
       const content = toString(element);
       const position = getPosition(element);
       const timestamp = new Date().valueOf();
 
       // Prevent recording new state in list if last one has been new enough
-      const lastState = states[stateAtRef.current];
+      const lastEntry = history[historyAtRef.current];
       if (
         (!ignoreTimestamp && timestamp - _trackStateTimestamp < 500) ||
-        (lastState && lastState.content === content)
+        (lastEntry && lastEntry[1] === content)
       ) {
         _trackStateTimestamp = timestamp;
         return;
       }
 
-      const at = ++stateAtRef.current;
-      states[at] = { content, position };
-      states.splice(at + 1);
+      const at = ++historyAtRef.current;
+      history[at] = [position, content];
+      history.splice(at + 1);
       if (at > 500) {
-        stateAtRef.current--;
-        states.shift();
+        historyAtRef.current--;
+        history.shift();
       }
     };
 
@@ -313,27 +309,27 @@ export const useEditable = (
         // coincides with React not executing the update immediately and then getting stuck,
         // which can be prevented by issuing a dummy state change.
         event.preventDefault();
-        return unblock();
+        return unblock([]);
       }
 
       if (isUndoRedoKey(event)) {
         event.preventDefault();
 
-        let state: State;
+        let history: History;
         if (!event.shiftKey) {
-          const at = --stateAtRef.current;
-          state = statesRef.current[at];
-          if (!state) stateAtRef.current = 0;
+          const at = --historyAtRef.current;
+          history = historyRef.current[at];
+          if (!history) historyAtRef.current = 0;
         } else {
-          const at = ++stateAtRef.current;
-          state = statesRef.current[at];
-          if (!state) stateAtRef.current = statesRef.current.length - 1;
+          const at = ++historyAtRef.current;
+          history = historyRef.current[at];
+          if (!history) historyAtRef.current = historyRef.current.length - 1;
         }
 
-        if (state) {
+        if (history) {
           disconnect();
-          positionRef.current = state.position.position;
-          onChangeRef.current(state.content, state.position);
+          positionRef.current = history[0].position;
+          onChangeRef.current(history[1], history[0]);
         }
         return;
       } else {

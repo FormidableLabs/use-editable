@@ -12,8 +12,7 @@ interface Position {
   line: number;
 }
 
-type History = [position: Position, content: string];
-
+type History = [Position, string];
 type ChangeHandler = (text: string, position: Position) => void;
 type UpdateAction = (content: string) => void;
 
@@ -301,7 +300,7 @@ export const useEditable = (
     };
 
     const onKeyDown = (event: HTMLElementEventMap['keydown']) => {
-      if (event.defaultPrevented) {
+      if (event.defaultPrevented || event.target !== element) {
         return;
       } else if (disconnectedRef.current) {
         // React Quirk: It's expected that we may lose events while disconnected, which is why
@@ -402,17 +401,17 @@ export const useEditable = (
       flushChanges();
     };
 
+    window.addEventListener('keydown', onKeyDown);
     element.addEventListener('focus', onFocus);
     element.addEventListener('blur', onBlur);
     element.addEventListener('paste', onPaste);
-    element.addEventListener('keydown', onKeyDown);
     element.addEventListener('keyup', onKeyUp);
 
     return () => {
+      window.removeEventListener('keydown', onKeyDown);
       element.removeEventListener('focus', onFocus);
       element.removeEventListener('blur', onBlur);
       element.removeEventListener('paste', onPaste);
-      element.removeEventListener('keydown', onKeyDown);
       element.removeEventListener('keyup', onKeyUp);
       element.style.whiteSpace = prevWhiteSpace;
       element.contentEditable = prevContentEditable;

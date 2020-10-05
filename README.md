@@ -76,7 +76,7 @@ This library has been tested against and **should work properly** using:
 - Firefox
 
 There are known issues in **IE 11** due to the `MutationObserver` method being unable to
-readd text nodes that have been removed via the `contenteditable`.
+read text nodes that have been removed via the `contenteditable`.
 
 ## FAQ
 

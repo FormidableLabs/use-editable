@@ -292,7 +292,8 @@ export const useEditable = (
               mutation.nextSibling
             );
           for (i = mutation.addedNodes.length - 1; i >= 0; i--)
-            mutation.target.removeChild(mutation.addedNodes[i]);
+            if (mutation.addedNodes[i].parentNode)
+              mutation.target.removeChild(mutation.addedNodes[i]);
         }
 
         onChangeRef.current(content, position);

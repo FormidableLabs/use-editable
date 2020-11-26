@@ -1,10 +1,4 @@
-import {
-  RefObject,
-  useCallback,
-  useState,
-  useRef,
-  useLayoutEffect,
-} from 'react';
+import { RefObject, useCallback, useState, useLayoutEffect } from 'react';
 
 interface Position {
   position: number;
@@ -156,6 +150,16 @@ interface Options {
   indentation?: number;
 }
 
+type State = [
+  observer: MutationObserver,
+  disconnected: boolean,
+  onChange: ChangeHandler,
+  queue: MutationRecord[],
+  history: History[],
+  historyAt: number,
+  position: number
+];
+
 export const useEditable = (
   elementRef: RefObject<HTMLElement>,
   onChange: ChangeHandler,
@@ -164,28 +168,34 @@ export const useEditable = (
   if (!opts) opts = {};
 
   const unblock = useState([])[1];
-  const onChangeRef = useRef(onChange);
-  const positionRef = useRef(-1);
-  const historyRef = useRef<History[]>([]);
-  const historyAtRef = useRef(-1);
-  const queueRef = useRef<MutationRecord[]>([]);
-  const addMutationsToQueue = (list: MutationRecord[]) => {
-    for (let i = 0; i < list.length; i++) queueRef.current.push(list[i]);
-  };
+  const state: State = useState(() => {
+    const state: State = [
+      null as any /* observer */,
+      false /* disconnected */,
+      onChange /* onChange */,
+      [] /* queue */,
+      [] /* history */,
+      -1 /* historyAt */,
+      -1 /* position */,
+    ] as any;
 
-  const disconnectedRef = useRef(false);
-  const observerRef = useRef(new MutationObserver(addMutationsToQueue));
+    if (typeof MutationObserver !== 'undefined') {
+      state[0 /* observer */] = new MutationObserver(batch => {
+        state[3 /* queue */].push(...batch);
+      });
+    }
 
-  onChangeRef.current = onChange;
+    return state;
+  })[0];
 
   const update = useCallback((content: string) => {
     const { current: element } = elementRef;
     if (element) {
       const position = getPosition(element);
       const prevContent = toString(element);
-      positionRef.current =
+      state[6 /* position */] =
         position.position + (content.length - prevContent.length);
-      onChangeRef.current(content, position);
+      state[2 /* onChange */](content, position);
     }
   }, []);
 
@@ -193,30 +203,32 @@ export const useEditable = (
   if (typeof navigator !== 'object') return update;
 
   useLayoutEffect(() => {
+    state[2 /* onChange */] = onChange;
+
     if (!elementRef.current || opts!.disabled) return;
 
-    disconnectedRef.current = false;
-    observerRef.current.observe(elementRef.current, observerSettings);
-    if (positionRef.current >= 0) {
-      setPosition(elementRef.current, positionRef.current);
+    state[1 /* disconnected */] = false;
+    state[0 /* observer */].observe(elementRef.current, observerSettings);
+    if (state[6 /* position */] >= 0) {
+      setPosition(elementRef.current, state[6 /* position */]);
     }
 
     return () => {
-      observerRef.current.disconnect();
+      state[0 /* observer */].disconnect();
     };
   });
 
   useLayoutEffect(() => {
     if (!elementRef.current || opts!.disabled) {
-      historyRef.current.length = 0;
-      historyAtRef.current = -1;
+      state[4 /* history */].length = 0;
+      state[5 /* historyAt */] = -1;
       return;
     }
 
     const element = elementRef.current!;
-    if (positionRef.current > -1) {
+    if (state[6 /* position */] > -1) {
       element.focus();
-      setPosition(element, positionRef.current);
+      setPosition(element, state[6 /* position */]);
     }
 
     const prevWhiteSpace = element.style.whiteSpace;
@@ -243,15 +255,15 @@ export const useEditable = (
 
     let _trackStateTimestamp: number;
     const trackState = (ignoreTimestamp?: boolean) => {
-      if (!elementRef.current || positionRef.current === -1) return;
+      if (!elementRef.current || state[6 /* position */] === -1) return;
 
-      const { current: history } = historyRef;
+      const history = state[4 /* history */];
       const content = toString(element);
       const position = getPosition(element);
       const timestamp = new Date().valueOf();
 
       // Prevent recording new state in list if last one has been new enough
-      const lastEntry = history[historyAtRef.current];
+      const lastEntry = history[state[5 /* historyAt */]];
       if (
         (!ignoreTimestamp && timestamp - _trackStateTimestamp < 500) ||
         (lastEntry && lastEntry[1] === content)
@@ -260,30 +272,30 @@ export const useEditable = (
         return;
       }
 
-      const at = ++historyAtRef.current;
+      const at = ++state[5 /* historyAt */];
       history[at] = [position, content];
       history.splice(at + 1);
       if (at > 500) {
-        historyAtRef.current--;
+        state[5 /* historyAt */]--;
         history.shift();
       }
     };
 
     const disconnect = () => {
-      observerRef.current.disconnect();
-      disconnectedRef.current = true;
+      state[0 /* observer */].disconnect();
+      state[1 /* disconnected */] = true;
     };
 
     const flushChanges = () => {
-      addMutationsToQueue(observerRef.current.takeRecords());
-      if (queueRef.current.length > 0) {
+      state[3 /* queue */].push(...state[0 /* observer */].takeRecords());
+      if (state[3 /* queue */].length) {
         disconnect();
         const content = toString(element);
         const position = getPosition(element);
-        positionRef.current = position.position;
+        state[6 /* position */] = position.position;
         let mutation: MutationRecord | void;
         let i = 0;
-        while ((mutation = queueRef.current.pop())) {
+        while ((mutation = state[3 /* queue */].pop())) {
           if (mutation.oldValue !== null)
             mutation.target.textContent = mutation.oldValue;
           for (i = mutation.removedNodes.length - 1; i >= 0; i--)
@@ -296,14 +308,14 @@ export const useEditable = (
               mutation.target.removeChild(mutation.addedNodes[i]);
         }
 
-        onChangeRef.current(content, position);
+        state[2 /* onChange */](content, position);
       }
     };
 
     const onKeyDown = (event: HTMLElementEventMap['keydown']) => {
       if (event.defaultPrevented || event.target !== element) {
         return;
-      } else if (disconnectedRef.current) {
+      } else if (state[1 /* disconnected */]) {
         // React Quirk: It's expected that we may lose events while disconnected, which is why
         // we'd like to block some inputs if they're unusually fast. However, this always
         // coincides with React not executing the update immediately and then getting stuck,
@@ -317,19 +329,20 @@ export const useEditable = (
 
         let history: History;
         if (!event.shiftKey) {
-          const at = --historyAtRef.current;
-          history = historyRef.current[at];
-          if (!history) historyAtRef.current = 0;
+          const at = --state[5 /* historyAt */];
+          history = state[4 /* history */][at];
+          if (!history) state[5 /* historyAt */] = 0;
         } else {
-          const at = ++historyAtRef.current;
-          history = historyRef.current[at];
-          if (!history) historyAtRef.current = historyRef.current.length - 1;
+          const at = ++state[5 /* historyAt */];
+          history = state[4 /* history */][at];
+          if (!history)
+            state[5 /* historyAt */] = state[4 /* history */].length - 1;
         }
 
         if (history) {
           disconnect();
-          positionRef.current = history[0].position;
-          onChangeRef.current(history[1], history[0]);
+          state[6 /* position */] = history[0].position;
+          state[2 /* onChange */](history[1], history[0]);
         }
         return;
       } else {
@@ -387,11 +400,11 @@ export const useEditable = (
     };
 
     const onFocus = () => {
-      positionRef.current = getPosition(element).position;
+      state[6 /* position */] = getPosition(element).position;
     };
 
     const onBlur = () => {
-      positionRef.current = -1;
+      state[6 /* position */] = -1;
     };
 
     const onPaste = (event: HTMLElementEventMap['paste']) => {

@@ -6,6 +6,8 @@ import {
   useLayoutEffect,
 } from 'react';
 
+const __BROWSER__ = typeof navigator === 'object';
+
 interface Position {
   position: number;
   content: string;
@@ -174,7 +176,9 @@ export const useEditable = (
   };
 
   const disconnectedRef = useRef(false);
-  const observerRef = useRef(new MutationObserver(addMutationsToQueue));
+  const observerRef = useRef(
+    __BROWSER__ ? new MutationObserver(addMutationsToQueue) : null
+  );
 
   onChangeRef.current = onChange;
 
@@ -190,7 +194,7 @@ export const useEditable = (
   }, []);
 
   // Only for SSR / server-side logic
-  if (typeof navigator !== 'object') return update;
+  if (!__BROWSER__) return update;
 
   useLayoutEffect(() => {
     if (!elementRef.current || opts!.disabled) return;

@@ -1,14 +1,12 @@
-import { useCallback, useState, useLayoutEffect } from 'react';
+import { useState, useLayoutEffect, useMemo } from 'react';
 
-interface Position {
+export interface Position {
   position: number;
   content: string;
   line: number;
 }
 
 type History = [Position, string];
-type ChangeHandler = (text: string, position: Position) => void;
-type UpdateAction = (content: string) => void;
 
 const observerSettings = {
   characterData: true,
@@ -41,6 +39,22 @@ const toString = (element: HTMLElement): string => {
   if (content[content.length - 1] !== '\n') content += '\n';
 
   return content;
+};
+
+const setStart = (range: Range, node: Node, offset: number) => {
+  if (offset < node.textContent!.length) {
+    range.setStart(node, offset);
+  } else {
+    range.setStartAfter(node);
+  }
+};
+
+const setEnd = (range: Range, node: Node, offset: number) => {
+  if (offset < node.textContent!.length) {
+    range.setEnd(node, offset);
+  } else {
+    range.setEndAfter(node);
+  }
 };
 
 const getPosition = (element: HTMLElement): Position => {
@@ -95,52 +109,73 @@ const getPosition = (element: HTMLElement): Position => {
   };
 };
 
-const setPosition = (element: HTMLElement, position: number): void => {
-  const selection = window.getSelection()!;
+const makeRange = (
+  element: HTMLElement,
+  start: number,
+  end?: number
+): Range => {
+  if (!end) end = start;
+
   const range = document.createRange();
   const queue: Node[] = [element.firstChild!];
   let current = 0;
 
   let node: Node;
-  while ((node = queue.pop()!)) {
+  let position = start;
+  while ((node = queue[queue.length - 1])) {
     if (node.nodeType === Node.TEXT_NODE) {
       const length = node.textContent!.length;
       if (current + length >= position) {
         const offset = position - current;
-        if (offset === length) {
-          range.setStartAfter(node);
+        if (position === start) {
+          setStart(range, node, offset);
+          if (end !== start) {
+            position = end;
+            continue;
+          } else {
+            break;
+          }
         } else {
-          range.setStart(node, offset);
+          setEnd(range, node, offset);
+          break;
         }
-        break;
       }
 
       current += node.textContent!.length;
     } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName === 'BR') {
       if (current + 1 >= position) {
-        range.setStartAfter(node);
-        break;
+        if (position === start) {
+          setStart(range, node, 0);
+          if (end !== start) {
+            position = end;
+            continue;
+          } else {
+            break;
+          }
+        } else {
+          setEnd(range, node, 0);
+          break;
+        }
       }
 
       current++;
     }
 
+    queue.pop();
     if (node.nextSibling) queue.push(node.nextSibling);
     if (node.firstChild) queue.push(node.firstChild);
   }
 
-  selection.empty();
-  selection.addRange(range);
+  return range;
 };
 
-const insert = (text: string) => {
+const setPosition = (
+  element: HTMLElement,
+  start: number,
+  end?: number
+): void => {
   const selection = window.getSelection()!;
-  let range = window.getSelection()!.getRangeAt(0)!;
-  const node = document.createTextNode(text);
-  selection.getRangeAt(0).deleteContents();
-  range.insertNode(node);
-  range = document.createRange();
-  range.setStartAfter(node);
+  const range = makeRange(element, start, end);
   selection.empty();
   selection.addRange(range);
 };
@@ -153,18 +188,25 @@ interface Options {
 interface State {
   observer: MutationObserver;
   disconnected: boolean;
-  onChange: ChangeHandler;
+  onChange(text: string, position: Position): void;
   queue: MutationRecord[];
   history: History[];
   historyAt: number;
   position: number;
 }
 
+interface Edit {
+  /** Replaces the entire content of the editable while adjusting the caret position. */
+  update(content: string): void;
+  /** Inserts new text at the caret position while deleting text in range of the offset (which accepts negative offsets). */
+  insert(append: string, offset?: number): void;
+}
+
 export const useEditable = (
   elementRef: { current: HTMLElement | undefined | null },
-  onChange: ChangeHandler,
+  onChange: (text: string, position: Position) => void,
   opts?: Options
-): UpdateAction => {
+): Edit => {
   if (!opts) opts = {};
 
   const unblock = useState([])[1];
@@ -188,19 +230,40 @@ export const useEditable = (
     return state;
   })[0];
 
-  const update = useCallback((content: string) => {
-    const { current: element } = elementRef;
-    if (element) {
-      const position = getPosition(element);
-      const prevContent = toString(element);
-      state.position =
-        position.position + (content.length - prevContent.length);
-      state.onChange(content, position);
-    }
-  }, []);
+  const edit = useMemo<Edit>(
+    () => ({
+      update(content: string) {
+        const { current: element } = elementRef;
+        if (element) {
+          const position = getPosition(element);
+          const prevContent = toString(element);
+          position.position = state.position =
+            position.position + (content.length - prevContent.length);
+          state.onChange(content, position);
+        }
+      },
+      insert(append: string, deleteOffset?: number) {
+        const { current: element } = elementRef;
+        if (element) {
+          let range = window.getSelection()!.getRangeAt(0)!;
+          range.deleteContents();
+          range.collapse();
+          const position = getPosition(element);
+          const offset = deleteOffset || 0;
+          const start = position.position + (offset < 0 ? offset : 0);
+          const end = position.position + (offset > 0 ? offset : 0);
+          range = makeRange(element, start, end);
+          range.deleteContents();
+          range.insertNode(document.createTextNode(append));
+          setPosition(element, start + append.length);
+        }
+      },
+    }),
+    []
+  );
 
   // Only for SSR / server-side logic
-  if (typeof navigator !== 'object') return update;
+  if (typeof navigator !== 'object') return edit;
 
   useLayoutEffect(() => {
     state.onChange = onChange;
@@ -357,24 +420,11 @@ export const useEditable = (
         const match = /\S/g.exec(position.content);
         const index = match ? match.index : position.content.length;
         const text = '\n' + position.content.slice(0, index);
-        insert(text);
+        edit.insert(text);
       } else if (!hasPlaintextSupport && event.key === 'Backspace') {
         event.preventDefault();
         const range = window.getSelection()!.getRangeAt(0)!;
-        if (
-          range.startContainer !== range.endContainer ||
-          range.startOffset !== range.endOffset
-        ) {
-          range.deleteContents();
-        } else {
-          // Firefox Quirk: Backspacing won't preserve the correct position
-          // so it's easier to reimplement it and skip rendering for normal backspacing
-          disconnect();
-          const position = getPosition(element);
-          const index = Math.max(0, position.position - 1);
-          const content = toString(element);
-          update(content.slice(0, index) + content.slice(index + 1));
-        }
+        edit.insert('', range.collapsed ? -1 : 0);
       } else if (opts!.indentation && event.key === 'Tab') {
         event.preventDefault();
         const position = getPosition(element);
@@ -385,7 +435,7 @@ export const useEditable = (
             position.content.replace(indentRe, '') +
             content.slice(start + position.content.length)
           : content.slice(0, start) + '\t' + content.slice(start);
-        update(newContent);
+        edit.update(newContent);
       }
     };
 
@@ -408,7 +458,7 @@ export const useEditable = (
     const onPaste = (event: HTMLElementEventMap['paste']) => {
       event.preventDefault();
       trackState(true);
-      insert(event.clipboardData!.getData('text/plain'));
+      edit.insert(event.clipboardData!.getData('text/plain'));
       trackState(true);
       flushChanges();
     };
@@ -430,5 +480,5 @@ export const useEditable = (
     };
   }, [elementRef.current!, opts!.disabled, opts!.indentation]);
 
-  return update;
+  return edit;
 };

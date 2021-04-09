@@ -410,6 +410,9 @@ export const useEditable = (
           : content.slice(0, start) + '\t' + content.slice(start);
         edit.update(newContent);
       }
+
+      // Flush changes as a key is held so the app can catch up
+      if (event.repeat) flushChanges();
     };
 
     const onKeyUp = (event: HTMLElementEventMap['keyup']) => {

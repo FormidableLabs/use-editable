@@ -2,6 +2,7 @@ import { useState, useLayoutEffect, useMemo } from 'react';
 
 export interface Position {
   position: number;
+  extent: number;
   content: string;
   line: number;
 }
@@ -13,6 +14,14 @@ const observerSettings = {
   characterDataOldValue: true,
   childList: true,
   subtree: true,
+};
+
+const getCurrentRange = () => window.getSelection()!.getRangeAt(0)!;
+
+const setCurrentRange = (range: Range) => {
+  const selection = window.getSelection()!;
+  selection.empty();
+  selection.addRange(range);
 };
 
 const isUndoRedoKey = (event: KeyboardEvent): boolean =>
@@ -60,9 +69,9 @@ const setEnd = (range: Range, node: Node, offset: number) => {
 const getPosition = (element: HTMLElement): Position => {
   // Firefox Quirk: Since plaintext-only is unsupported the position
   // of the text here is retrieved via a range, rather than traversal
-  // as seen in setPosition()
-  const selection = window.getSelection()!;
-  const range = selection.getRangeAt(0)!;
+  // as seen in makeRange()
+  const range = getCurrentRange();
+  const extent = !range.collapsed ? range.toString().length : 0;
   const untilRange = document.createRange();
   untilRange.setStart(element, 0);
   untilRange.setEnd(range.startContainer, range.startOffset);
@@ -71,7 +80,7 @@ const getPosition = (element: HTMLElement): Position => {
   const lines = content.split('\n');
   const line = lines.length - 1;
   content = lines[line];
-  return { position, content, line };
+  return { position, extent, content, line };
 };
 
 const makeRange = (
@@ -134,17 +143,6 @@ const makeRange = (
   return range;
 };
 
-const setPosition = (
-  element: HTMLElement,
-  start: number,
-  end?: number
-): void => {
-  const selection = window.getSelection()!;
-  const range = makeRange(element, start, end);
-  selection.empty();
-  selection.addRange(range);
-};
-
 interface Options {
   disabled?: boolean;
   indentation?: number;
@@ -157,7 +155,7 @@ interface State {
   queue: MutationRecord[];
   history: History[];
   historyAt: number;
-  position: number;
+  position: Position | null;
 }
 
 interface Edit {
@@ -183,7 +181,7 @@ export const useEditable = (
       queue: [],
       history: [],
       historyAt: -1,
-      position: -1,
+      position: null,
     };
 
     if (typeof MutationObserver !== 'undefined') {
@@ -202,15 +200,15 @@ export const useEditable = (
         if (element) {
           const position = getPosition(element);
           const prevContent = toString(element);
-          position.position = state.position =
-            position.position + (content.length - prevContent.length);
+          position.position += content.length - prevContent.length;
+          state.position = position;
           state.onChange(content, position);
         }
       },
       insert(append: string, deleteOffset?: number) {
         const { current: element } = elementRef;
         if (element) {
-          let range = window.getSelection()!.getRangeAt(0)!;
+          let range = getCurrentRange();
           range.deleteContents();
           range.collapse();
           const position = getPosition(element);
@@ -220,7 +218,7 @@ export const useEditable = (
           range = makeRange(element, start, end);
           range.deleteContents();
           range.insertNode(document.createTextNode(append));
-          setPosition(element, start + append.length);
+          setCurrentRange(makeRange(element, start + append.length));
         }
       },
     }),
@@ -237,8 +235,11 @@ export const useEditable = (
 
     state.disconnected = false;
     state.observer.observe(elementRef.current, observerSettings);
-    if (state.position >= 0) {
-      setPosition(elementRef.current, state.position);
+    if (state.position) {
+      const { position, extent } = state.position;
+      setCurrentRange(
+        makeRange(elementRef.current, position, position + extent)
+      );
     }
 
     return () => {
@@ -254,9 +255,10 @@ export const useEditable = (
     }
 
     const element = elementRef.current!;
-    if (state.position > -1) {
+    if (state.position) {
       element.focus();
-      setPosition(element, state.position);
+      const { position, extent } = state.position;
+      setCurrentRange(makeRange(element, position, position + extent));
     }
 
     const prevWhiteSpace = element.style.whiteSpace;
@@ -283,7 +285,7 @@ export const useEditable = (
 
     let _trackStateTimestamp: number;
     const trackState = (ignoreTimestamp?: boolean) => {
-      if (!elementRef.current || state.position === -1) return;
+      if (!elementRef.current || state.position) return;
 
       const content = toString(element);
       const position = getPosition(element);
@@ -314,12 +316,16 @@ export const useEditable = (
     };
 
     const flushChanges = () => {
-      const position = getPosition(element);
       state.queue.push(...state.observer.takeRecords());
-      if (state.queue.length || position.position !== state.position) {
+      const position = getPosition(element);
+      if (
+        state.queue.length ||
+        position.position !== state.position!.position ||
+        position.extent !== state.position!.extent
+      ) {
         disconnect();
         const content = toString(element);
-        state.position = position.position;
+        state.position = position;
         let mutation: MutationRecord | void;
         let i = 0;
         while ((mutation = state.queue.pop())) {
@@ -367,7 +373,7 @@ export const useEditable = (
 
         if (history) {
           disconnect();
-          state.position = history[0].position;
+          state.position = history[0];
           state.onChange(history[1], history[0]);
         }
         return;
@@ -390,7 +396,7 @@ export const useEditable = (
         // Firefox Quirk: Since plaintext-only is unsupported we must
         // ensure that only a single character is deleted
         event.preventDefault();
-        const range = window.getSelection()!.getRangeAt(0)!;
+        const range = getCurrentRange();
         edit.insert('', range.collapsed ? -1 : 0);
       } else if (opts!.indentation && event.key === 'Tab') {
         event.preventDefault();
@@ -415,11 +421,11 @@ export const useEditable = (
     };
 
     const onFocus = () => {
-      state.position = getPosition(element).position;
+      state.position = getPosition(element);
     };
 
     const onBlur = () => {
-      state.position = -1;
+      state.position = null;
     };
 
     const onPaste = (event: HTMLElementEventMap['paste']) => {

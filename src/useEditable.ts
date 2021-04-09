@@ -58,55 +58,20 @@ const setEnd = (range: Range, node: Node, offset: number) => {
 };
 
 const getPosition = (element: HTMLElement): Position => {
+  // Firefox Quirk: Since plaintext-only is unsupported the position
+  // of the text here is retrieved via a range, rather than traversal
+  // as seen in setPosition()
   const selection = window.getSelection()!;
-  const queue: Node[] = [element.firstChild!];
-
-  // Without plaintext-only mode we may get a node and an offset of one of its children
-  // if the selection happens to land in-between nodes
-  let { focusNode, focusOffset } = selection;
-  if (focusNode && focusNode.nodeType !== Node.TEXT_NODE) {
-    if (focusOffset <= focusNode.childNodes.length - 1)
-      focusNode = focusNode.childNodes[focusOffset];
-    focusOffset = 0;
-  }
-
-  let position = 0;
-  let line = 0;
-  let content = '';
-  let node: Node | void;
-  while ((node = queue.pop()!)) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      let textContent = node.textContent!;
-      if (node === focusNode) {
-        textContent = textContent.slice(0, focusOffset);
-      }
-
-      position += textContent.length;
-      content += textContent;
-      const newlineRe = /\n/g;
-
-      let match: RegExpExecArray | null;
-      while ((match = newlineRe.exec(textContent))) {
-        content = textContent.slice(match.index + 1);
-        line++;
-      }
-
-      if (node === focusNode) break;
-    } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName === 'BR') {
-      content = '';
-      line++;
-      position++;
-    }
-
-    if (node.nextSibling && node !== focusNode) queue.push(node.nextSibling);
-    if (node.firstChild) queue.push(node.firstChild);
-  }
-
-  return {
-    position,
-    content,
-    line,
-  };
+  const range = selection.getRangeAt(0)!;
+  const untilRange = document.createRange();
+  untilRange.setStart(element, 0);
+  untilRange.setEnd(range.startContainer, range.startOffset);
+  let content = untilRange.toString();
+  const position = content.length;
+  const lines = content.split('\n');
+  const line = lines.length - 1;
+  content = lines[line];
+  return { position, content, line };
 };
 
 const makeRange = (
@@ -412,7 +377,7 @@ export const useEditable = (
 
       if (event.key === 'Enter') {
         event.preventDefault();
-        // Firefox / IE11 Quirk: Since plaintext-only is unsupported we must
+        // Firefox Quirk: Since plaintext-only is unsupported we must
         // ensure that only newline characters are inserted
         const position = getPosition(element);
         // We also get the current line and preserve indentation for the next
@@ -422,6 +387,8 @@ export const useEditable = (
         const text = '\n' + position.content.slice(0, index);
         edit.insert(text);
       } else if (!hasPlaintextSupport && event.key === 'Backspace') {
+        // Firefox Quirk: Since plaintext-only is unsupported we must
+        // ensure that only a single character is deleted
         event.preventDefault();
         const range = window.getSelection()!.getRangeAt(0)!;
         edit.insert('', range.collapsed ? -1 : 0);

@@ -349,11 +349,11 @@ export const useEditable = (
     };
 
     const flushChanges = () => {
+      const position = getPosition(element);
       state.queue.push(...state.observer.takeRecords());
-      if (state.queue.length) {
+      if (state.queue.length || position.position !== state.position) {
         disconnect();
         const content = toString(element);
-        const position = getPosition(element);
         state.position = position.position;
         let mutation: MutationRecord | void;
         let i = 0;

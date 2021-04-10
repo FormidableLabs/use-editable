@@ -143,11 +143,6 @@ const makeRange = (
   return range;
 };
 
-interface Options {
-  disabled?: boolean;
-  indentation?: number;
-}
-
 interface State {
   observer: MutationObserver;
   disconnected: boolean;
@@ -158,11 +153,18 @@ interface State {
   position: Position | null;
 }
 
-interface Edit {
+export interface Options {
+  disabled?: boolean;
+  indentation?: number;
+}
+
+export interface Edit {
   /** Replaces the entire content of the editable while adjusting the caret position. */
   update(content: string): void;
   /** Inserts new text at the caret position while deleting text in range of the offset (which accepts negative offsets). */
   insert(append: string, offset?: number): void;
+  /** Positions the caret where specified */
+  move(pos: number | { row: number; column: number }): void;
 }
 
 export const useEditable = (
@@ -219,6 +221,22 @@ export const useEditable = (
           range.deleteContents();
           range.insertNode(document.createTextNode(append));
           setCurrentRange(makeRange(element, start + append.length));
+        }
+      },
+      move(pos: number | { row: number; column: number }) {
+        const { current: element } = elementRef;
+        if (element) {
+          element.focus();
+          let position: number;
+          if (typeof pos === 'number') {
+            position = pos;
+          } else {
+            const lines = toString(element).split('\n');
+            const before = lines.slice(0, pos.row).join('\n');
+            position = before.length + pos.column;
+          }
+
+          setCurrentRange(makeRange(element, position));
         }
       },
     }),

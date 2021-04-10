@@ -227,13 +227,13 @@ export const useEditable = (
         const { current: element } = elementRef;
         if (element) {
           element.focus();
-          let position: number;
+          let position = 0;
           if (typeof pos === 'number') {
             position = pos;
           } else {
-            const lines = toString(element).split('\n');
-            const before = lines.slice(0, pos.row).join('\n');
-            position = before.length + pos.column;
+            const lines = toString(element).split('\n').slice(0, pos.row);
+            if (pos.row) position += lines.join('\n').length + 1;
+            position += pos.column;
           }
 
           setCurrentRange(makeRange(element, position));

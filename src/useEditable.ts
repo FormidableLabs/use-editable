@@ -25,7 +25,7 @@ const setCurrentRange = (range: Range) => {
 };
 
 const isUndoRedoKey = (event: KeyboardEvent): boolean =>
-  (event.metaKey || event.ctrlKey) && !event.altKey && event.key === 'z';
+  (event.metaKey || event.ctrlKey) && !event.altKey && event.code === 'KeyZ';
 
 const toString = (element: HTMLElement): string => {
   const queue: Node[] = [element.firstChild!];
@@ -285,7 +285,7 @@ export const useEditable = (
 
     let _trackStateTimestamp: number;
     const trackState = (ignoreTimestamp?: boolean) => {
-      if (!elementRef.current || state.position) return;
+      if (!elementRef.current || !state.position) return;
 
       const content = toString(element);
       const position = getPosition(element);

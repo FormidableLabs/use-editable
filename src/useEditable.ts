@@ -318,11 +318,7 @@ export const useEditable = (
     const flushChanges = () => {
       state.queue.push(...state.observer.takeRecords());
       const position = getPosition(element);
-      if (
-        state.queue.length ||
-        position.position !== state.position!.position ||
-        position.extent !== state.position!.extent
-      ) {
+      if (state.queue.length) {
         disconnect();
         const content = toString(element);
         state.position = position;

@@ -411,7 +411,13 @@ export const useEditable = (
         // ensure that only a single character is deleted
         event.preventDefault();
         const range = getCurrentRange();
-        edit.insert('', range.collapsed ? -1 : 0);
+        if (!range.collapsed) {
+          edit.insert('', 0);
+        } else {
+          const position = getPosition(element);
+          const match = indentRe.exec(position.content);
+          edit.insert('', match ? -match[0].length : -1);
+        }
       } else if (opts!.indentation && event.key === 'Tab') {
         event.preventDefault();
         const position = getPosition(element);
@@ -421,7 +427,9 @@ export const useEditable = (
           ? content.slice(0, start) +
             position.content.replace(indentRe, '') +
             content.slice(start + position.content.length)
-          : content.slice(0, start) + '\t' + content.slice(start);
+          : content.slice(0, start) +
+            (opts!.indentation ? ' '.repeat(opts!.indentation) : '\t') +
+            content.slice(start);
         edit.update(newContent);
       }
 

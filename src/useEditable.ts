@@ -297,9 +297,9 @@ export const useEditable = (
         '' + opts!.indentation;
     }
 
-    const indentRe = new RegExp(
-      `^(?:${' '.repeat(opts!.indentation || 0)}|\\t)`
-    );
+    const indentPattern = `${' '.repeat(opts!.indentation || 0)}`;
+    const indentRe = new RegExp(`^(?:${indentPattern})`);
+    const blanklineRe = new RegExp(`^(?:${indentPattern})*(${indentPattern})$`);
 
     let _trackStateTimestamp: number;
     const trackState = (ignoreTimestamp?: boolean) => {
@@ -415,8 +415,8 @@ export const useEditable = (
           edit.insert('', 0);
         } else {
           const position = getPosition(element);
-          const match = indentRe.exec(position.content);
-          edit.insert('', match ? -match[0].length : -1);
+          const match = blanklineRe.exec(position.content);
+          edit.insert('', match ? -match[1].length : -1);
         }
       } else if (opts!.indentation && event.key === 'Tab') {
         event.preventDefault();

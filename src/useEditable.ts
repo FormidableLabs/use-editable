@@ -165,6 +165,8 @@ export interface Edit {
   insert(append: string, offset?: number): void;
   /** Positions the caret where specified */
   move(pos: number | { row: number; column: number }): void;
+  /** Returns the current editor state, as usually received in onChange */
+  getState(): { text: string; position: Position };
 }
 
 export const useEditable = (
@@ -238,6 +240,12 @@ export const useEditable = (
 
           setCurrentRange(makeRange(element, position));
         }
+      },
+      getState() {
+        const { current: element } = elementRef;
+        const text = toString(element!);
+        const position = getPosition(element!);
+        return { text, position };
       },
     }),
     []

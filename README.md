@@ -119,7 +119,7 @@ position.
 
 ## API
 
-### `useEditable`
+### useEditable
 
 The **first argument** is `elementRef` and accepts a ref object of type `RefObject<HTMLElement>` which
 points to the element that should become editable. This ref is allowed to be `null` or change during
@@ -140,12 +140,45 @@ the editing behavior of the hook:
 - The `disabled` option disables editing on the editable by removing the `contentEditable` attribute from
   it again.
 - The `indentation` option may be a number of displayed spaces for indentation. This also enables the
-  improved `Tab` key behavior which will indent the current line or dedent the current line when shift is
+  improved `Tab` key behavior, which will indent the current line or dedent the current line when shift is
   held (Be aware that this will make the editor act as a focus trap!)
 
-Additionally the `useEditable` hook returns a function that may be used to update the content while
-adjusting the next render's cursor position. This is a convenience method that can come in handy for
-adding auto-suggested content in combination with a `Position`'s current line contents for instance.
+When `options.indentation` is set then `useEditable` will prevent the insertion of tab characters and
+will instead insert the specified amount of whitespaces, which makes handling of columns much easier.
+
+Additionally the `useEditable` hook returns an `Edit` handle with several methods, as documented below.
+
+#### Edit.update
+
+`Edit.update(content: string): void`
+
+Replaces the entire content of the editable while adjusting the caret position.
+This will shift the caret by the difference in length between the current content and the passed content.
+
+#### Edit.insert
+
+`Edit.insert(append: string, offset?: number): void`
+
+Inserts new text at the caret position while deleting text in range of the offset (which accepts negative offsets).
+For example, when `offset` is set to `-1` then a single character is deleted to the left of the caret before
+inserting any new text. When it's set to `2` then two characters to the right of the carets are deleted.
+The `append` text may also be set to an empty string to only apply deletions without inserting any text.
+When any text is selected then it's simply erased first and `offset` is ignored.
+
+#### Edit.move
+
+`Edit.move(pos: number | { row: number; column: number }): void`
+
+This moves the caret to the specified position. The position may either be a character index (a `number`)
+or coordinates specifying a `row` and `column` separately.
+
+#### Edit.getState
+
+`Edit.getState(): { text: string; position: Position }`
+
+This method allows getting the current state of the editable, which is the same as what `onChange` usually
+receives. This is useful when adding custom editing actions in a key down handler or when programmatically
+imitating `onChange` otherwise, while the editable is selected.
 
 ## Acknowledgments
 

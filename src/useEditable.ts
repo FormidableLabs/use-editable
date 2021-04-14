@@ -70,6 +70,9 @@ const getPosition = (element: HTMLElement): Position => {
   // Firefox Quirk: Since plaintext-only is unsupported the position
   // of the text here is retrieved via a range, rather than traversal
   // as seen in makeRange()
+  if (window.getSelection()!.rangeCount === 0) {
+    setCurrentRange(document.createRange());
+  }
   const range = getCurrentRange();
   const extent = !range.collapsed ? range.toString().length : 0;
   const untilRange = document.createRange();

@@ -453,12 +453,12 @@ export const useEditable = (
       element.focus();
     };
 
-    const onFocus = () => {
-      state.position = getPosition(element);
-    };
-
-    const onBlur = () => {
-      state.position = null;
+    const onSelect = (event: Event) => {
+      // Chrome Quirk: The contenteditable may lose its selection immediately on first focus
+      state.position =
+        window.getSelection()!.rangeCount && event.target === element
+          ? getPosition(element)
+          : null;
     };
 
     const onPaste = (event: HTMLElementEventMap['paste']) => {
@@ -469,16 +469,14 @@ export const useEditable = (
       flushChanges();
     };
 
+    document.addEventListener('selectstart', onSelect);
     window.addEventListener('keydown', onKeyDown);
-    element.addEventListener('focus', onFocus);
-    element.addEventListener('blur', onBlur);
     element.addEventListener('paste', onPaste);
     element.addEventListener('keyup', onKeyUp);
 
     return () => {
+      document.removeEventListener('selectstart', onSelect);
       window.removeEventListener('keydown', onKeyDown);
-      element.removeEventListener('focus', onFocus);
-      element.removeEventListener('blur', onBlur);
       element.removeEventListener('paste', onPaste);
       element.removeEventListener('keyup', onKeyUp);
       element.style.whiteSpace = prevWhiteSpace;

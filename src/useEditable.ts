@@ -414,7 +414,10 @@ export const useEditable = (
         const index = match ? match.index : position.content.length;
         const text = '\n' + position.content.slice(0, index);
         edit.insert(text);
-      } else if (!hasPlaintextSupport && event.key === 'Backspace') {
+      } else if (
+        (!hasPlaintextSupport || opts!.indentation) &&
+        event.key === 'Backspace'
+      ) {
         // Firefox Quirk: Since plaintext-only is unsupported we must
         // ensure that only a single character is deleted
         event.preventDefault();

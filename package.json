@@ -1,7 +1,7 @@
 {
   "name": "use-editable",
   "description": "A small React hook to turn elements into fully renderable & editable content surfaces, like code editors, using contenteditable (and magic)",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "main": "dist/use-editable.js",
   "module": "dist/use-editable.es.js",
   "types": "dist/types/index.d.ts",

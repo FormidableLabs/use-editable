@@ -88,7 +88,8 @@ const makeRange = (
   start: number,
   end?: number
 ): Range => {
-  if (!end) end = start;
+  if (start <= 0) start = 0;
+  if (!end || end < 0) end = start;
 
   const range = document.createRange();
   const queue: Node[] = [element.firstChild!];

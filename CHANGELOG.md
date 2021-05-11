@@ -1,5 +1,17 @@
 # use-editable
 
+## 2.3.3
+
+- Prevent empty text from being inserted
+  (See [`82ac3eb`](https://github.com/kitten/use-editable/commit/82ac3eb5000e0fa4967924ab54a98738270a1183))
+- Prevent empty or negative ranges from being created for empty elements
+  (See [`b79d013`](https://github.com/kitten/use-editable/commit/b79d0130527baa9ba703e5193dd9beddc00904e8))
+
+## 2.3.2
+
+- Fix missing backspace behaviour on `opts.indentation` for non-plaintext-only browsers
+  (See [`093b10e`](https://github.com/kitten/use-editable/commit/093b10eb645aece3e8e974721fe8ebf9c1e7a1a3))
+
 ## 2.3.1
 
 - Fix Chrome quirk where initial focus would immediately lose its selected range by switching to `selectstart` and checking for `window.getSelection().rangeCount`

@@ -222,7 +222,7 @@ export const useEditable = (
           const end = position.position + (offset > 0 ? offset : 0);
           range = makeRange(element, start, end);
           range.deleteContents();
-          range.insertNode(document.createTextNode(append));
+          if (append) range.insertNode(document.createTextNode(append));
           setCurrentRange(makeRange(element, start + append.length));
         }
       },

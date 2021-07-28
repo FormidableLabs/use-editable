@@ -19,9 +19,9 @@
     "react",
     "hook"
   ],
-  "repository": "https://github.com/kitten/use-editable",
+  "repository": "https://github.com/FormidableLabs/use-editable",
   "bugs": {
-    "url": "https://github.com/kitten/use-editable/issues"
+    "url": "https://github.com/FormidableLabs/use-editable/issues"
   },
   "scripts": {
     "check": "tsc",

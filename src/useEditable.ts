@@ -256,21 +256,28 @@ export const useEditable = (
   if (typeof navigator !== 'object') return edit;
 
   useLayoutEffect(() => {
-    state.onChange = onChange;
+    // We need to block the re-attachment of observer in case of re-render on a SELECTED element
+    // Otherwise, we will get a new observer for the same element and it will cause unconsistent caret state.
+    if (elementRef.current !== document.activeElement) {
+      state.onChange = onChange;
 
-    if (!elementRef.current || opts!.disabled) return;
+      if (!elementRef.current || opts!.disabled) return;
 
-    state.disconnected = false;
-    state.observer.observe(elementRef.current, observerSettings);
-    if (state.position) {
-      const { position, extent } = state.position;
-      setCurrentRange(
-        makeRange(elementRef.current, position, position + extent)
-      );
+      state.disconnected = false;
+      state.observer.observe(elementRef.current, observerSettings);
+      if (state.position) {
+        const { position, extent } = state.position;
+        setCurrentRange(
+          makeRange(elementRef.current, position, position + extent)
+        );
+      }
     }
 
     return () => {
-      state.observer.disconnect();
+      if (elementRef.current === document.activeElement) {
+        console.log('disconnect');
+        state.observer.disconnect();
+      }
     };
   });
 

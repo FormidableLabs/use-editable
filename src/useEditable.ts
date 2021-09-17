@@ -275,7 +275,6 @@ export const useEditable = (
 
     return () => {
       if (elementRef.current === document.activeElement) {
-        console.log('disconnect');
         state.observer.disconnect();
       }
     };

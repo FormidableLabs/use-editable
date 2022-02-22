@@ -190,3 +190,8 @@ imitating `onChange` otherwise, while the editable is selected.
   Firefox workarounds. It also uses raw HTML highlighting / updating.
 - [`codemirror.next`](https://github.com/codemirror/codemirror.next) is an invaluable source to see different techniques when
   handling text input and DOM update tricks.
+
+
+## Maintenance Status
+
+**Stable:** Formidable is not planning to develop any new features for this project. We are still responding to bug reports and security concerns. We are still welcoming PRs for this project, but PRs that include new features should be small and easy to integrate and should not include breaking changes.

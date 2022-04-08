@@ -11,6 +11,9 @@
   <a href="https://bundlephobia.com/result?p=use-editable">
     <img alt="Minified gzip size" src="https://img.shields.io/bundlephobia/minzip/use-editable.svg?label=gzip%20size" />
   </a>
+  <a href=https://github.com/FormidableLabs/use-editable#maintenance-status">
+    <img alt="Maintenance Status" src="https://img.shields.io/badge/maintenance-stable-yellow.svg?color=yellow&style=flat" />
+  </a>
   <br />
   <br />
 </div>

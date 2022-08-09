@@ -428,7 +428,7 @@ export const useEditable = (
         } else {
           const position = getPosition(element);
           const match = blanklineRe.exec(position.content);
-          edit.insert('', match ? -match[1].length : -1);
+          edit.insert('', opts!.indentation && match ? -match[1].length : -1);
         }
       } else if (opts!.indentation && event.key === 'Tab') {
         event.preventDefault();

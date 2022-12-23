@@ -1,5 +1,7 @@
 <div align="center">
-  <h2 align="center">use-editable</h2>
+  <a href="https://formidable.com/open-source/" target="_blank">
+    <img alt="Use Editable — Formidable, We build the modern web" src="./use-editable-Hero.png" />
+  </a>
   <p align="center"><strong>A small React hook to turn elements into fully renderable & editable content surfaces, like code editors, using contenteditable (and magic)</strong></p>
   <br />
   <a href="https://npmjs.com/package/use-editable">

@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://formidable.com/open-source/" target="_blank">
-    <img alt="Use Editable — Formidable, We build the modern web" src="./use-editable-Hero.png" />
+    <img alt="Use Editable — Formidable, We build the modern web" src="https://raw.githubusercontent.com/FormidableLabs/use-editable/master/use-editable-Hero.png" />
   </a>
   <p align="center"><strong>A small React hook to turn elements into fully renderable & editable content surfaces, like code editors, using contenteditable (and magic)</strong></p>
   <br />

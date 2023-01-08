@@ -417,7 +417,7 @@ export const useEditable = (
         edit.insert(text);
       } else if (
         (!hasPlaintextSupport || opts!.indentation) &&
-        event.key === 'Backspace'
+        event.key === 'Backspace' && !event.ctrlKey && !event.altKey && !event.metaKey
       ) {
         // Firefox Quirk: Since plaintext-only is unsupported we must
         // ensure that only a single character is deleted
@@ -428,7 +428,7 @@ export const useEditable = (
         } else {
           const position = getPosition(element);
           const match = blanklineRe.exec(position.content);
-          edit.insert('', match ? -match[1].length : -1);
+          edit.insert('', opts!.indentation && match ? -match[1].length : -1);
         }
       } else if (opts!.indentation && event.key === 'Tab') {
         event.preventDefault();

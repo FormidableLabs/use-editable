@@ -16,8 +16,9 @@ const observerSettings = {
   subtree: true,
 };
 
-const getCurrentRange = (windowOverride?: Window) =>
-  (windowOverride || window).getSelection()!.getRangeAt(0)!;
+const getCurrentRange = (windowOverride?: Window) => {
+  return (windowOverride || window).getSelection()!.getRangeAt(0)!;
+};
 
 const setCurrentRange = (range: Range, windowOverride?: Window) => {
   const selection = (windowOverride || window).getSelection()!;

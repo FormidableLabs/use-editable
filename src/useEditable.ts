@@ -17,7 +17,11 @@ const observerSettings = {
 };
 
 const getCurrentRange = (windowOverride?: Window) => {
-  return (windowOverride || window).getSelection()!.getRangeAt(0)!;
+  try {
+    return (windowOverride || window).getSelection()!.getRangeAt(0)!;
+  } catch (error) {
+    return (windowOverride || window).document.createRange();
+  }
 };
 
 const setCurrentRange = (range: Range, windowOverride?: Window) => {
@@ -75,7 +79,7 @@ const getPosition = (element: HTMLElement): Position => {
   const win = getCurrentWindow(element);
   const range = getCurrentRange(win);
   const extent = !range.collapsed ? range.toString().length : 0;
-  const untilRange = document.createRange();
+  const untilRange = win.document.createRange();
   untilRange.setStart(element, 0);
   untilRange.setEnd(range.startContainer, range.startOffset);
   let content = untilRange.toString();
@@ -94,7 +98,8 @@ const makeRange = (
   if (start <= 0) start = 0;
   if (!end || end < 0) end = start;
 
-  const range = document.createRange();
+  const win = getCurrentWindow(element);
+  const range = win.document.createRange();
   const queue: Node[] = [element.firstChild!];
   let current = 0;
 
@@ -230,7 +235,7 @@ export const useEditable = (
           const end = position.position + (offset > 0 ? offset : 0);
           range = makeRange(element, start, end);
           range.deleteContents();
-          if (append) range.insertNode(document.createTextNode(append));
+          if (append) range.insertNode(win.document.createTextNode(append));
           setCurrentRange(makeRange(element, start + append.length), win);
         }
       },
@@ -488,13 +493,13 @@ export const useEditable = (
 
     const win = getCurrentWindow(element);
 
-    document.addEventListener('selectstart', onSelect);
+    win.document.addEventListener('selectstart', onSelect);
     win.addEventListener('keydown', onKeyDown);
     element.addEventListener('paste', onPaste);
     element.addEventListener('keyup', onKeyUp);
 
     return () => {
-      document.removeEventListener('selectstart', onSelect);
+      win.document.removeEventListener('selectstart', onSelect);
       win.removeEventListener('keydown', onKeyDown);
       element.removeEventListener('paste', onPaste);
       element.removeEventListener('keyup', onKeyUp);

@@ -220,7 +220,7 @@ export const useEditable = (
         const { current: element } = elementRef;
         const win = getCurrentWindow(element);
         if (element) {
-          let range = getCurrentRange();
+          let range = getCurrentRange(win);
           range.deleteContents();
           range.collapse();
           const position = getPosition(element);
@@ -236,6 +236,7 @@ export const useEditable = (
       move(pos: number | { row: number; column: number }) {
         const { current: element } = elementRef;
         if (element) {
+          const win = getCurrentWindow(element);
           element.focus();
           let position = 0;
           if (typeof pos === 'number') {
@@ -246,7 +247,7 @@ export const useEditable = (
             position += pos.column;
           }
 
-          setCurrentRange(makeRange(element, position));
+          setCurrentRange(makeRange(element, position), win);
         }
       },
       getState() {
@@ -270,9 +271,11 @@ export const useEditable = (
     state.disconnected = false;
     state.observer.observe(elementRef.current, observerSettings);
     if (state.position) {
+      const win = getCurrentWindow(elementRef.current);
       const { position, extent } = state.position;
       setCurrentRange(
-        makeRange(elementRef.current, position, position + extent)
+        makeRange(elementRef.current, position, position + extent),
+        win
       );
     }
 
@@ -292,7 +295,8 @@ export const useEditable = (
     if (state.position) {
       element.focus();
       const { position, extent } = state.position;
-      setCurrentRange(makeRange(element, position, position + extent));
+      const win = getCurrentWindow(element);
+      setCurrentRange(makeRange(element, position, position + extent), win);
     }
 
     const prevWhiteSpace = element.style.whiteSpace;
@@ -429,7 +433,7 @@ export const useEditable = (
         // Firefox Quirk: Since plaintext-only is unsupported we must
         // ensure that only a single character is deleted
         event.preventDefault();
-        const range = getCurrentRange();
+        const range = getCurrentRange(win);
         if (!range.collapsed) {
           edit.insert('', 0);
         } else {

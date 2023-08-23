@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, useMemo } from 'react';
+import { useState, useLayoutEffect, useMemo, MutableRefObject } from 'react';
 
 export interface Position {
   position: number;
@@ -16,10 +16,11 @@ const observerSettings = {
   subtree: true,
 };
 
-const getCurrentRange = () => window.getSelection()!.getRangeAt(0)!;
+const getCurrentRange = (windowOverride?: Window) =>
+  (windowOverride || window).getSelection()!.getRangeAt(0)!;
 
-const setCurrentRange = (range: Range) => {
-  const selection = window.getSelection()!;
+const setCurrentRange = (range: Range, windowOverride?: Window) => {
+  const selection = (windowOverride || window).getSelection()!;
   selection.empty();
   selection.addRange(range);
 };
@@ -66,11 +67,14 @@ const setEnd = (range: Range, node: Node, offset: number) => {
   }
 };
 
-const getPosition = (element: HTMLElement): Position => {
+const getPosition = (
+  element: HTMLElement,
+  windowOverride?: Window
+): Position => {
   // Firefox Quirk: Since plaintext-only is unsupported the position
   // of the text here is retrieved via a range, rather than traversal
   // as seen in makeRange()
-  const range = getCurrentRange();
+  const range = getCurrentRange(windowOverride);
   const extent = !range.collapsed ? range.toString().length : 0;
   const untilRange = document.createRange();
   untilRange.setStart(element, 0);
@@ -157,6 +161,7 @@ interface State {
 export interface Options {
   disabled?: boolean;
   indentation?: number;
+  window?: MutableRefObject<Window>;
 }
 
 export interface Edit {
@@ -203,7 +208,7 @@ export const useEditable = (
       update(content: string) {
         const { current: element } = elementRef;
         if (element) {
-          const position = getPosition(element);
+          const position = getPosition(element, opts?.window?.current);
           const prevContent = toString(element);
           position.position += content.length - prevContent.length;
           state.position = position;
@@ -212,18 +217,19 @@ export const useEditable = (
       },
       insert(append: string, deleteOffset?: number) {
         const { current: element } = elementRef;
+        const win = opts?.window?.current;
         if (element) {
           let range = getCurrentRange();
           range.deleteContents();
           range.collapse();
-          const position = getPosition(element);
+          const position = getPosition(element, win);
           const offset = deleteOffset || 0;
           const start = position.position + (offset < 0 ? offset : 0);
           const end = position.position + (offset > 0 ? offset : 0);
           range = makeRange(element, start, end);
           range.deleteContents();
           if (append) range.insertNode(document.createTextNode(append));
-          setCurrentRange(makeRange(element, start + append.length));
+          setCurrentRange(makeRange(element, start + append.length), win);
         }
       },
       move(pos: number | { row: number; column: number }) {
@@ -459,9 +465,10 @@ export const useEditable = (
 
     const onSelect = (event: Event) => {
       // Chrome Quirk: The contenteditable may lose its selection immediately on first focus
+      const win = opts?.window?.current || window;
       state.position =
-        window.getSelection()!.rangeCount && event.target === element
-          ? getPosition(element)
+        win.getSelection()!.rangeCount && event.target === element
+          ? getPosition(element, win)
           : null;
     };
 
@@ -473,14 +480,16 @@ export const useEditable = (
       flushChanges();
     };
 
+    const win = opts?.window?.current || window;
+
     document.addEventListener('selectstart', onSelect);
-    window.addEventListener('keydown', onKeyDown);
+    win.addEventListener('keydown', onKeyDown);
     element.addEventListener('paste', onPaste);
     element.addEventListener('keyup', onKeyUp);
 
     return () => {
       document.removeEventListener('selectstart', onSelect);
-      window.removeEventListener('keydown', onKeyDown);
+      win.removeEventListener('keydown', onKeyDown);
       element.removeEventListener('paste', onPaste);
       element.removeEventListener('keyup', onKeyUp);
       element.style.whiteSpace = prevWhiteSpace;

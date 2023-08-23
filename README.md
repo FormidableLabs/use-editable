@@ -144,6 +144,8 @@ the editing behavior of the hook:
 - The `indentation` option may be a number of displayed spaces for indentation. This also enables the
   improved `Tab` key behavior, which will indent the current line or dedent the current line when shift is
   held (Be aware that this will make the editor act as a focus trap!)
+- The `window` allows to provide a `MutableRefObject<Window>` to other window. It's useful when you use React portal
+  to render content in an iframe.
 
 When `options.indentation` is set then `useEditable` will prevent the insertion of tab characters and
 will instead insert the specified amount of whitespaces, which makes handling of columns much easier.
@@ -192,7 +194,6 @@ imitating `onChange` otherwise, while the editable is selected.
   Firefox workarounds. It also uses raw HTML highlighting / updating.
 - [`codemirror.next`](https://github.com/codemirror/codemirror.next) is an invaluable source to see different techniques when
   handling text input and DOM update tricks.
-
 
 ## Maintenance Status
 

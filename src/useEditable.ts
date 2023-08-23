@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, useMemo, MutableRefObject } from 'react';
+import { useState, useLayoutEffect, useMemo } from 'react';
 
 export interface Position {
   position: number;
@@ -67,14 +67,12 @@ const setEnd = (range: Range, node: Node, offset: number) => {
   }
 };
 
-const getPosition = (
-  element: HTMLElement,
-  windowOverride?: Window
-): Position => {
+const getPosition = (element: HTMLElement): Position => {
   // Firefox Quirk: Since plaintext-only is unsupported the position
   // of the text here is retrieved via a range, rather than traversal
   // as seen in makeRange()
-  const range = getCurrentRange(windowOverride);
+  const win = getCurrentWindow(element);
+  const range = getCurrentRange(win);
   const extent = !range.collapsed ? range.toString().length : 0;
   const untilRange = document.createRange();
   untilRange.setStart(element, 0);
@@ -161,7 +159,6 @@ interface State {
 export interface Options {
   disabled?: boolean;
   indentation?: number;
-  window?: MutableRefObject<Window>;
 }
 
 export interface Edit {
@@ -173,6 +170,10 @@ export interface Edit {
   move(pos: number | { row: number; column: number }): void;
   /** Returns the current editor state, as usually received in onChange */
   getState(): { text: string; position: Position };
+}
+
+function getCurrentWindow(element: HTMLElement | undefined | null): Window {
+  return (element && element.ownerDocument.defaultView) || window;
 }
 
 export const useEditable = (
@@ -208,7 +209,7 @@ export const useEditable = (
       update(content: string) {
         const { current: element } = elementRef;
         if (element) {
-          const position = getPosition(element, opts?.window?.current);
+          const position = getPosition(element);
           const prevContent = toString(element);
           position.position += content.length - prevContent.length;
           state.position = position;
@@ -217,12 +218,12 @@ export const useEditable = (
       },
       insert(append: string, deleteOffset?: number) {
         const { current: element } = elementRef;
-        const win = opts?.window?.current;
+        const win = getCurrentWindow(element);
         if (element) {
           let range = getCurrentRange();
           range.deleteContents();
           range.collapse();
-          const position = getPosition(element, win);
+          const position = getPosition(element);
           const offset = deleteOffset || 0;
           const start = position.position + (offset < 0 ? offset : 0);
           const end = position.position + (offset > 0 ? offset : 0);
@@ -465,10 +466,10 @@ export const useEditable = (
 
     const onSelect = (event: Event) => {
       // Chrome Quirk: The contenteditable may lose its selection immediately on first focus
-      const win = opts?.window?.current || window;
+      const win = getCurrentWindow(element);
       state.position =
         win.getSelection()!.rangeCount && event.target === element
-          ? getPosition(element, win)
+          ? getPosition(element)
           : null;
     };
 
@@ -480,7 +481,7 @@ export const useEditable = (
       flushChanges();
     };
 
-    const win = opts?.window?.current || window;
+    const win = getCurrentWindow(element);
 
     document.addEventListener('selectstart', onSelect);
     win.addEventListener('keydown', onKeyDown);

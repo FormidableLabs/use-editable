@@ -454,7 +454,7 @@ export const useEditable = (
       if (!isUndoRedoKey(event)) trackState();
       flushChanges();
       // Chrome Quirk: The contenteditable may lose focus after the first edit or so
-      element.focus();
+      setTimeout(() => element.focus(), 0);
     };
 
     const onSelect = (event: Event) => {

@@ -16,10 +16,16 @@ const observerSettings = {
   subtree: true,
 };
 
-const getCurrentRange = () => window.getSelection()!.getRangeAt(0)!;
+const getCurrentRange = (windowOverride?: Window) => {
+  try {
+    return (windowOverride || window).getSelection()!.getRangeAt(0)!;
+  } catch (error) {
+    return (windowOverride || window).document.createRange();
+  }
+};
 
-const setCurrentRange = (range: Range) => {
-  const selection = window.getSelection()!;
+const setCurrentRange = (range: Range, windowOverride?: Window) => {
+  const selection = (windowOverride || window).getSelection()!;
   selection.empty();
   selection.addRange(range);
 };
@@ -70,9 +76,10 @@ const getPosition = (element: HTMLElement): Position => {
   // Firefox Quirk: Since plaintext-only is unsupported the position
   // of the text here is retrieved via a range, rather than traversal
   // as seen in makeRange()
-  const range = getCurrentRange();
+  const win = getCurrentWindow(element);
+  const range = getCurrentRange(win);
   const extent = !range.collapsed ? range.toString().length : 0;
-  const untilRange = document.createRange();
+  const untilRange = win.document.createRange();
   untilRange.setStart(element, 0);
   untilRange.setEnd(range.startContainer, range.startOffset);
   let content = untilRange.toString();
@@ -91,7 +98,8 @@ const makeRange = (
   if (start <= 0) start = 0;
   if (!end || end < 0) end = start;
 
-  const range = document.createRange();
+  const win = getCurrentWindow(element);
+  const range = win.document.createRange();
   const queue: Node[] = [element.firstChild!];
   let current = 0;
 
@@ -170,6 +178,10 @@ export interface Edit {
   getState(): { text: string; position: Position };
 }
 
+function getCurrentWindow(element: HTMLElement | undefined | null): Window {
+  return (element && element.ownerDocument.defaultView) || window;
+}
+
 export const useEditable = (
   elementRef: { current: HTMLElement | undefined | null },
   onChange: (text: string, position: Position) => void,
@@ -212,8 +224,9 @@ export const useEditable = (
       },
       insert(append: string, deleteOffset?: number) {
         const { current: element } = elementRef;
+        const win = getCurrentWindow(element);
         if (element) {
-          let range = getCurrentRange();
+          let range = getCurrentRange(win);
           range.deleteContents();
           range.collapse();
           const position = getPosition(element);
@@ -222,13 +235,14 @@ export const useEditable = (
           const end = position.position + (offset > 0 ? offset : 0);
           range = makeRange(element, start, end);
           range.deleteContents();
-          if (append) range.insertNode(document.createTextNode(append));
-          setCurrentRange(makeRange(element, start + append.length));
+          if (append) range.insertNode(win.document.createTextNode(append));
+          setCurrentRange(makeRange(element, start + append.length), win);
         }
       },
       move(pos: number | { row: number; column: number }) {
         const { current: element } = elementRef;
         if (element) {
+          const win = getCurrentWindow(element);
           element.focus();
           let position = 0;
           if (typeof pos === 'number') {
@@ -239,7 +253,7 @@ export const useEditable = (
             position += pos.column;
           }
 
-          setCurrentRange(makeRange(element, position));
+          setCurrentRange(makeRange(element, position), win);
         }
       },
       getState() {
@@ -263,9 +277,11 @@ export const useEditable = (
     state.disconnected = false;
     state.observer.observe(elementRef.current, observerSettings);
     if (state.position) {
+      const win = getCurrentWindow(elementRef.current);
       const { position, extent } = state.position;
       setCurrentRange(
-        makeRange(elementRef.current, position, position + extent)
+        makeRange(elementRef.current, position, position + extent),
+        win
       );
     }
 
@@ -285,7 +301,8 @@ export const useEditable = (
     if (state.position) {
       element.focus();
       const { position, extent } = state.position;
-      setCurrentRange(makeRange(element, position, position + extent));
+      const win = getCurrentWindow(element);
+      setCurrentRange(makeRange(element, position, position + extent), win);
     }
 
     const prevWhiteSpace = element.style.whiteSpace;
@@ -422,7 +439,7 @@ export const useEditable = (
         // Firefox Quirk: Since plaintext-only is unsupported we must
         // ensure that only a single character is deleted
         event.preventDefault();
-        const range = getCurrentRange();
+        const range = getCurrentRange(win);
         if (!range.collapsed) {
           edit.insert('', 0);
         } else {
@@ -459,8 +476,9 @@ export const useEditable = (
 
     const onSelect = (event: Event) => {
       // Chrome Quirk: The contenteditable may lose its selection immediately on first focus
+      const win = getCurrentWindow(element);
       state.position =
-        window.getSelection()!.rangeCount && event.target === element
+        win.getSelection()!.rangeCount && event.target === element
           ? getPosition(element)
           : null;
     };
@@ -473,14 +491,16 @@ export const useEditable = (
       flushChanges();
     };
 
-    document.addEventListener('selectstart', onSelect);
-    window.addEventListener('keydown', onKeyDown);
+    const win = getCurrentWindow(element);
+
+    win.document.addEventListener('selectstart', onSelect);
+    win.addEventListener('keydown', onKeyDown);
     element.addEventListener('paste', onPaste);
     element.addEventListener('keyup', onKeyUp);
 
     return () => {
-      document.removeEventListener('selectstart', onSelect);
-      window.removeEventListener('keydown', onKeyDown);
+      win.document.removeEventListener('selectstart', onSelect);
+      win.removeEventListener('keydown', onKeyDown);
       element.removeEventListener('paste', onPaste);
       element.removeEventListener('keyup', onKeyUp);
       element.style.whiteSpace = prevWhiteSpace;

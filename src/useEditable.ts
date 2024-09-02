@@ -258,7 +258,7 @@ export const useEditable = (
   useLayoutEffect(() => {
     state.onChange = onChange;
 
-    if (!elementRef.current || opts!.disabled) return;
+    if (!elementRef.current || opts?.disabled) return;
 
     state.disconnected = false;
     state.observer.observe(elementRef.current, observerSettings);
@@ -272,7 +272,7 @@ export const useEditable = (
     return () => {
       state.observer.disconnect();
     };
-  });
+  }, [elementRef, onChange, opts.disabled, state, state.disconnected, state.observer, state.position]);
 
   useLayoutEffect(() => {
     if (!elementRef.current || opts!.disabled) {

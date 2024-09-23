@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, useMemo } from 'react';
+import { useState, useLayoutEffect, useMemo, useRef } from 'react';
 
 export interface Position {
   position: number;
@@ -178,6 +178,7 @@ export const useEditable = (
   if (!opts) opts = {};
 
   const unblock = useState([])[1];
+  const positionRef = useRef<Position | null>(null);
   const state: State = useState(() => {
     const state: State = {
       observer: null as any,
@@ -206,6 +207,7 @@ export const useEditable = (
           const position = getPosition(element);
           const prevContent = toString(element);
           position.position += content.length - prevContent.length;
+          positionRef.current = position;
           state.position = position;
           state.onChange(content, position);
         }
@@ -223,7 +225,9 @@ export const useEditable = (
           range = makeRange(element, start, end);
           range.deleteContents();
           if (append) range.insertNode(document.createTextNode(append));
-          setCurrentRange(makeRange(element, start + append.length));
+          setTimeout(() => {
+            setCurrentRange(makeRange(element, start + append.length));
+          }, 0);
         }
       },
       move(pos: number | { row: number; column: number }) {
@@ -238,8 +242,9 @@ export const useEditable = (
             if (pos.row) position += lines.join('\n').length + 1;
             position += pos.column;
           }
-
-          setCurrentRange(makeRange(element, position));
+          setTimeout(() => {
+            setCurrentRange(makeRange(element, position));
+          }, 0);
         }
       },
       getState() {
@@ -252,9 +257,6 @@ export const useEditable = (
     []
   );
 
-  // Only for SSR / server-side logic
-  if (typeof navigator !== 'object') return edit;
-
   useLayoutEffect(() => {
     state.onChange = onChange;
 
@@ -262,8 +264,8 @@ export const useEditable = (
 
     state.disconnected = false;
     state.observer.observe(elementRef.current, observerSettings);
-    if (state.position) {
-      const { position, extent } = state.position;
+    if (positionRef.current) {
+      const { position, extent } = positionRef.current;
       setCurrentRange(
         makeRange(elementRef.current, position, position + extent)
       );
@@ -348,6 +350,7 @@ export const useEditable = (
       if (state.queue.length) {
         disconnect();
         const content = toString(element);
+        positionRef.current = position;
         state.position = position;
         let mutation: MutationRecord | void;
         let i = 0;
@@ -396,6 +399,7 @@ export const useEditable = (
 
         if (history) {
           disconnect();
+          positionRef.current = history[0];
           state.position = history[0];
           state.onChange(history[1], history[0]);
         }
@@ -459,10 +463,11 @@ export const useEditable = (
 
     const onSelect = (event: Event) => {
       // Chrome Quirk: The contenteditable may lose its selection immediately on first focus
-      state.position =
+      positionRef.current =
         window.getSelection()!.rangeCount && event.target === element
           ? getPosition(element)
           : null;
+      state.position = positionRef.current;
     };
 
     const onPaste = (event: HTMLElementEventMap['paste']) => {

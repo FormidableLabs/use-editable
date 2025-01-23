@@ -178,7 +178,7 @@ export const useEditable = (
   if (!opts) opts = {};
 
   const unblock = useState([])[1];
-  const state: State = useState(() => {
+  const createInitialState = (): State => {
     const state: State = {
       observer: null as any,
       disconnected: false,
@@ -190,13 +190,14 @@ export const useEditable = (
     };
 
     if (typeof MutationObserver !== 'undefined') {
-      state.observer = new MutationObserver(batch => {
-        state.queue.push(...batch);
+      state.observer = new MutationObserver(mutations => {
+        state.queue.push(...mutations);
       });
     }
 
     return state;
-  })[0];
+  };
+  const state: State = useState(() => createInitialState())[0];
 
   const edit = useMemo<Edit>(
     () => ({

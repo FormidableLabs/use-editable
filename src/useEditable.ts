@@ -144,6 +144,17 @@ const makeRange = (
   return range;
 };
 
+// Whether the DOM currently shows the content that `state.position` was computed
+// against. A re-render that isn't the direct result of this hook's own onChange call
+// (e.g. one triggered by an unrelated state update elsewhere in the tree) can commit
+// in between a keystroke's keydown and keyup. When that happens the DOM may already
+// contain a newer, native edit this hook doesn't know about yet, and restoring
+// `state.position` onto it would yank the browser's own (correct) cursor to the wrong
+// place -- corrupting every keystroke that follows. `state.expectedContent` is left
+// `undefined` when there's nothing to check against (e.g. before the first change).
+const matchesExpectedContent = (element: HTMLElement, state: State): boolean =>
+  state.expectedContent === undefined || toString(element) === state.expectedContent;
+
 interface State {
   observer: MutationObserver;
   disconnected: boolean;
@@ -152,6 +163,9 @@ interface State {
   history: History[];
   historyAt: number;
   position: Position | null;
+  /** The content the DOM is expected to show once `position` is applied to it.
+   * Used to detect a render that doesn't correspond to `position`, see below. */
+  expectedContent: string | undefined;
 }
 
 export interface Options {
@@ -187,6 +201,7 @@ export const useEditable = (
       history: [],
       historyAt: -1,
       position: null,
+      expectedContent: undefined,
     };
 
     if (typeof MutationObserver !== 'undefined') {
@@ -207,6 +222,7 @@ export const useEditable = (
           const prevContent = toString(element);
           position.position += content.length - prevContent.length;
           state.position = position;
+          state.expectedContent = content;
           state.onChange(content, position);
         }
       },
@@ -262,7 +278,7 @@ export const useEditable = (
 
     state.disconnected = false;
     state.observer.observe(elementRef.current, observerSettings);
-    if (state.position) {
+    if (state.position && matchesExpectedContent(elementRef.current, state)) {
       const { position, extent } = state.position;
       setCurrentRange(
         makeRange(elementRef.current, position, position + extent)
@@ -282,7 +298,7 @@ export const useEditable = (
     }
 
     const element = elementRef.current!;
-    if (state.position) {
+    if (state.position && matchesExpectedContent(element, state)) {
       element.focus();
       const { position, extent } = state.position;
       setCurrentRange(makeRange(element, position, position + extent));
@@ -349,6 +365,7 @@ export const useEditable = (
         disconnect();
         const content = toString(element);
         state.position = position;
+        state.expectedContent = content;
         let mutation: MutationRecord | void;
         let i = 0;
         while ((mutation = state.queue.pop())) {
@@ -397,6 +414,7 @@ export const useEditable = (
         if (history) {
           disconnect();
           state.position = history[0];
+          state.expectedContent = history[1];
           state.onChange(history[1], history[0]);
         }
         return;
@@ -459,10 +477,9 @@ export const useEditable = (
 
     const onSelect = (event: Event) => {
       // Chrome Quirk: The contenteditable may lose its selection immediately on first focus
-      state.position =
-        window.getSelection()!.rangeCount && event.target === element
-          ? getPosition(element)
-          : null;
+      const hasSelection = window.getSelection()!.rangeCount && event.target === element;
+      state.position = hasSelection ? getPosition(element) : null;
+      state.expectedContent = hasSelection ? toString(element) : undefined;
     };
 
     const onPaste = (event: HTMLElementEventMap['paste']) => {

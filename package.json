@@ -23,8 +23,11 @@
     "url": "https://github.com/FormidableLabs/use-editable/issues"
   },
   "scripts": {
-    "check": "tsc",
-    "build": "tsdown"
+    "check": "npm run check:format && npm run check:types",
+    "build": "tsdown",
+    "check:format": "prettier --check .",
+    "check:types": "tsc",
+    "format": "prettier --write ."
   },
   "prettier": {
     "singleQuote": true,
@@ -37,7 +40,7 @@
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.5",
     "@types/react": "^19.3.0",
-    "prettier": "^2.1.2",
+    "prettier": "^3.9.10",
     "publint": "^0.3.25",
     "react": "^19.3.1",
     "tsdown": "^0.23.1",

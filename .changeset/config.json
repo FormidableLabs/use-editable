@@ -1,0 +1,10 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.0/schema.json",
+  "changelog": [
+    "@changesets/changelog-github",
+    { "repo": "FormidableLabs/use-editable", "disableThanks": true }
+  ],
+  "access": "public",
+  "baseBranch": "main",
+  "privatePackages": false
+}

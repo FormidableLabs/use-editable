@@ -28,9 +28,7 @@ It aims to allow any element to be editable while still being able to render nor
 First install `use-editable` alongside `react`:
 
 ```sh
-yarn add use-editable
-# or
-npm install --save use-editable
+npm install use-editable
 ```
 
 You'll then be able to import `useEditable` and pass it an `HTMLElement` ref and an `onChange` handler.

@@ -2,3 +2,7 @@ npm-debug.log*
 dist/
 node_modules/
 coverage/
+.DS_Store
+.idea/
+.vscode/
+*.tgz

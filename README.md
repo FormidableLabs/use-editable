@@ -21,11 +21,9 @@
 
 It aims to allow any element to be editable while still being able to render normal React elements to it — no `innerHTML` and having to deal with operating with or rendering to raw HTML, or starting a full editor project from scratch.
 
-**Check out [the full demo on CodeSandbox](https://codesandbox.io/s/use-editable-0l9kc) with `prism-react-renderer`!**
-
 ## Usage
 
-First install `use-editable` alongside `react`:
+First install `use-editable` alongside `react` (version 18 or newer):
 
 ```sh
 npm install use-editable
@@ -75,8 +73,7 @@ This library has been tested against and **should work properly** using:
 - iOS Safari
 - Firefox
 
-There are known issues in **IE 11** due to the `MutationObserver` method being unable to
-read text nodes that have been removed via the `contenteditable`.
+The published build targets ES2022, so it requires a modern evergreen browser. IE 11 is not supported.
 
 ## FAQ
 
@@ -190,6 +187,10 @@ imitating `onChange` otherwise, while the editable is selected.
   Firefox workarounds. It also uses raw HTML highlighting / updating.
 - [`codemirror.next`](https://github.com/codemirror/codemirror.next) is an invaluable source to see different techniques when
   handling text input and DOM update tricks.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the local dev workflow, changesets, and how releases work.
 
 ## Maintenance Status
 

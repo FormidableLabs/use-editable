@@ -2,16 +2,14 @@
   "name": "use-editable",
   "description": "A small React hook to turn elements into fully renderable & editable content surfaces, like code editors, using contenteditable (and magic)",
   "version": "2.3.3",
+  "type": "commonjs",
   "main": "dist/use-editable.js",
   "module": "dist/use-editable.es.js",
   "types": "dist/use-editable.d.ts",
-  "source": "src/index.ts",
   "sideEffects": false,
   "license": "MIT",
   "files": [
-    "LICENSE",
-    "README.md",
-    "dist/"
+    "dist"
   ],
   "keywords": [
     "contenteditable",
@@ -19,6 +17,10 @@
     "react",
     "hook"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FormidableLabs/use-editable.git"
+  },
   "bugs": {
     "url": "https://github.com/FormidableLabs/use-editable/issues"
   },
@@ -27,7 +29,10 @@
     "build": "tsdown",
     "check:format": "prettier --check .",
     "check:types": "tsc",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepack": "npm run build",
+    "changeset": "changeset",
+    "changeset:version": "changeset version && npm install --package-lock-only"
   },
   "prettier": {
     "singleQuote": true,
@@ -39,6 +44,8 @@
   },
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.5",
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@types/react": "^19.3.0",
     "prettier": "^3.9.10",
     "publint": "^0.3.25",
@@ -46,8 +53,8 @@
     "tsdown": "^0.23.1",
     "typescript": "^7.0.2"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/FormidableLabs/use-editable.git"
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

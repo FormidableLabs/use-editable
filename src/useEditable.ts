@@ -27,6 +27,11 @@ const setCurrentRange = (range: Range) => {
 const isUndoRedoKey = (event: KeyboardEvent): boolean =>
   (event.metaKey || event.ctrlKey) && !event.altKey && event.code === 'KeyZ';
 
+// contenteditable Quirk: Without plaintext-only a pre/pre-wrap element must always
+// end with at least one newline character
+const normalize = (content: string): string =>
+  content[content.length - 1] !== '\n' ? content + '\n' : content;
+
 const toString = (element: HTMLElement): string => {
   const queue: Node[] = [element.firstChild!];
 
@@ -43,11 +48,7 @@ const toString = (element: HTMLElement): string => {
     if (node.firstChild) queue.push(node.firstChild);
   }
 
-  // contenteditable Quirk: Without plaintext-only a pre/pre-wrap element must always
-  // end with at least one newline character
-  if (content[content.length - 1] !== '\n') content += '\n';
-
-  return content;
+  return normalize(content);
 };
 
 const setStart = (range: Range, node: Node, offset: number) => {
@@ -145,15 +146,18 @@ const makeRange = (
 };
 
 // Whether the DOM currently shows the content that `state.position` was computed
-// against. A re-render that isn't the direct result of this hook's own onChange call
-// (e.g. one triggered by an unrelated state update elsewhere in the tree) can commit
-// in between a keystroke's keydown and keyup. When that happens the DOM may already
-// contain a newer, native edit this hook doesn't know about yet, and restoring
-// `state.position` onto it would yank the browser's own (correct) cursor to the wrong
-// place -- corrupting every keystroke that follows. `state.expectedContent` is left
-// `undefined` when there's nothing to check against (e.g. before the first change).
+// against. This runs on every render. Any render that isn't the direct result of this
+// hook's own onChange call (e.g. one triggered by an unrelated state update elsewhere
+// in the tree) can commit while the DOM already reflects content this hook hasn't
+// observed yet. In the keystroke case that's a native edit landing between keydown and
+// keyup; restoring `state.position` onto it would yank the browser's own (correct)
+// cursor to the wrong place -- corrupting every keystroke that follows. Every site that
+// sets `state.expectedContent` must store it in `toString`'s normalized form (see
+// `normalize`) so this comparison is exact. It's left `undefined` when there's nothing
+// to check against (e.g. before the first change).
 const matchesExpectedContent = (element: HTMLElement, state: State): boolean =>
-  state.expectedContent === undefined || toString(element) === state.expectedContent;
+  state.expectedContent === undefined ||
+  toString(element) === state.expectedContent;
 
 interface State {
   observer: MutationObserver;
@@ -220,12 +224,20 @@ export const useEditable = (
         if (element) {
           const position = getPosition(element);
           const prevContent = toString(element);
-          position.position += content.length - prevContent.length;
+          // Compare like with like: the DOM will read back with a trailing newline
+          // (see toString), so a caller passing content without one would otherwise
+          // get a caret delta that's off by one and an expectedContent that never matches
+          const nextContent = normalize(content);
+          position.position += nextContent.length - prevContent.length;
           state.position = position;
-          state.expectedContent = content;
+          state.expectedContent = nextContent;
           state.onChange(content, position);
         }
       },
+      // Mutates the DOM directly and places the caret itself, so it deliberately doesn't
+      // touch state.position / state.expectedContent. If a render lands before the next
+      // flushChanges(), matchesExpectedContent() sees the DOM has moved on and leaves the
+      // caret where insert() put it, which is what we want.
       insert(append: string, deleteOffset?: number) {
         const { current: element } = elementRef;
         if (element) {
@@ -477,7 +489,8 @@ export const useEditable = (
 
     const onSelect = (event: Event) => {
       // Chrome Quirk: The contenteditable may lose its selection immediately on first focus
-      const hasSelection = window.getSelection()!.rangeCount && event.target === element;
+      const hasSelection =
+        window.getSelection()!.rangeCount && event.target === element;
       state.position = hasSelection ? getPosition(element) : null;
       state.expectedContent = hasSelection ? toString(element) : undefined;
     };

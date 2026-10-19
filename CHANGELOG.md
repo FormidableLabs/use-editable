@@ -1,5 +1,20 @@
 # use-editable
 
+## 3.0.0
+
+### Major Changes
+
+- [#40](https://github.com/FormidableLabs/use-editable/pull/40) [`7097f72`](https://github.com/FormidableLabs/use-editable/commit/7097f72318d8c2ac8c366a6e160df92dea8d861c) - Require React 18 or newer, and ship modern JavaScript.
+  
+  - **Breaking:** the `react` peer dependency is now `>=18.0.0` (was `>=16.8.0`).
+  - **Breaking:** `dist/` now targets ES2022 instead of ES5. Bundlers that transpile `node_modules` for older browsers are unaffected.
+  - Types now live at `dist/use-editable.d.ts` (was `dist/types/index.d.ts`); the `types` field points there, so normal imports are unaffected. The `main` and `module` filenames are unchanged.
+  - The build moved from rollup, Babel, buble, closure-compiler and terser to tsdown; releases are published from CI with npm provenance.
+
+### Patch Changes
+
+- [#37](https://github.com/FormidableLabs/use-editable/pull/37) [`033a70c`](https://github.com/FormidableLabs/use-editable/commit/033a70cd746c5f869b3efeb4fbf27a792f82ee80) - Don't restore a stale caret position onto content it wasn't computed against. An unrelated re-render landing between a keystroke's `keydown` and `keyup` no longer yanks the caret to the wrong offset.
+
 ## 2.3.3
 
 - Prevent empty text from being inserted
